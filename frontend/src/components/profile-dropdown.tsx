@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { useNavigate } from '@tanstack/react-router'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -12,15 +13,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { LogOut, User as UserIcon, Shield } from 'lucide-react'
+import { LogOut, KeyRound, User as UserIcon } from 'lucide-react'
+import { ChangePasswordDialog } from '@/components/change-password-dialog'
+import { toast } from 'sonner'
 
 export function ProfileDropdown() {
   const { auth } = useAuthStore()
   const navigate = useNavigate()
+  const [openPasswordDialog, setOpenPasswordDialog] = useState(false)
 
   const user = auth.user || {
-    name: 'Usuario Conteo',
-    username: 'invitado',
+    name: 'Yamile Hayes Michel',
+    username: 'admin',
     role: 'ADMIN',
   }
 
@@ -32,49 +36,74 @@ export function ProfileDropdown() {
 
   const handleLogout = () => {
     auth.reset()
+    toast.info('Sesión cerrada correctamente')
     navigate({ to: '/sign-in', replace: true })
   }
 
   return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <Button variant='ghost' className='relative h-9 w-9 rounded-full border border-border/60 hover:bg-accent'>
-          <Avatar className='h-8 w-8'>
-            <AvatarImage src='/avatars/01.png' alt={user.name} />
-            <AvatarFallback className='bg-primary text-primary-foreground font-semibold text-xs'>
-              {user.name ? user.name.slice(0, 2).toUpperCase() : 'US'}
-            </AvatarFallback>
-          </Avatar>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className='w-60' align='end' forceMount>
-        <DropdownMenuLabel className='font-normal p-3'>
-          <div className='flex flex-col space-y-1.5'>
-            <p className='text-sm leading-none font-semibold text-foreground flex items-center justify-between'>
-              {user.name}
-              <Badge variant='outline' className='ml-2 text-[10px] uppercase font-bold tracking-wider bg-primary/10 text-primary border-primary/20 px-1.5 py-0.5'>
-                {roleName}
-              </Badge>
-            </p>
-            <p className='text-xs leading-none text-muted-foreground flex items-center gap-1 pt-1'>
-              <UserIcon className='h-3 w-3' />
-              @{user.username || 'usuario'}
-            </p>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem className='text-xs cursor-pointer' onClick={() => navigate({ to: '/' })}>
-            <Shield className='mr-2 h-4 w-4 text-muted-foreground' />
-            Panel de Control
+    <>
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger asChild>
+          <Button variant='ghost' className='relative h-9 w-9 rounded-full border border-border/60 hover:bg-accent'>
+            <Avatar className='h-8 w-8'>
+              <AvatarImage src='/avatars/01.png' alt={user.name} />
+              <AvatarFallback className='bg-primary text-primary-foreground font-bold text-xs'>
+                {user.name ? user.name.slice(0, 2).toUpperCase() : 'YH'}
+              </AvatarFallback>
+            </Avatar>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className='w-64' align='end' forceMount>
+          <DropdownMenuLabel className='font-normal p-3'>
+            <div className='flex flex-col space-y-1.5'>
+              <div className='flex items-center justify-between'>
+                <p className='text-sm font-bold text-foreground truncate max-w-[140px]'>
+                  {user.name}
+                </p>
+                <Badge
+                  variant='outline'
+                  className='text-[10px] uppercase font-black tracking-wider bg-primary/10 text-primary border-primary/30 px-2 py-0.5'
+                >
+                  {roleName}
+                </Badge>
+              </div>
+              <p className='text-xs text-muted-foreground flex items-center gap-1 font-mono pt-0.5'>
+                <UserIcon className='h-3 w-3 text-muted-foreground' />
+                @{user.username || 'usuario'}
+              </p>
+            </div>
+          </DropdownMenuLabel>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuGroup>
+            <DropdownMenuItem
+              className='text-xs cursor-pointer py-2 font-medium'
+              onClick={() => setOpenPasswordDialog(true)}
+            >
+              <KeyRound className='mr-2 h-4 w-4 text-primary' />
+              Cambiar contraseña
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem
+            variant='destructive'
+            className='text-xs cursor-pointer py-2 text-destructive font-semibold focus:text-destructive'
+            onClick={handleLogout}
+          >
+            <LogOut className='mr-2 h-4 w-4' />
+            Cerrar sesión
           </DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant='destructive' className='text-xs cursor-pointer text-destructive focus:text-destructive' onClick={handleLogout}>
-          <LogOut className='mr-2 h-4 w-4' />
-          Cerrar sesión
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Dialog para cambio de contraseña */}
+      <ChangePasswordDialog
+        open={openPasswordDialog}
+        onOpenChange={setOpenPasswordDialog}
+      />
+    </>
   )
 }

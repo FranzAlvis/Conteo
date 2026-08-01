@@ -15,6 +15,7 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
 import { Route as AuthenticatedResultadosRouteImport } from './routes/_authenticated/resultados'
 import { Route as AuthenticatedMesasRouteImport } from './routes/_authenticated/mesas'
+import { Route as AuthenticatedDelegadosRouteImport } from './routes/_authenticated/delegados'
 import { Route as AuthenticatedConfiguracionRouteImport } from './routes/_authenticated/configuracion'
 import { Route as errors503RouteImport } from './routes/(errors)/503'
 import { Route as errors500RouteImport } from './routes/(errors)/500'
@@ -71,6 +72,11 @@ const AuthenticatedResultadosRoute = AuthenticatedResultadosRouteImport.update({
 const AuthenticatedMesasRoute = AuthenticatedMesasRouteImport.update({
   id: '/mesas',
   path: '/mesas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDelegadosRoute = AuthenticatedDelegadosRouteImport.update({
+  id: '/delegados',
+  path: '/delegados',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedConfiguracionRoute =
@@ -237,6 +243,7 @@ export interface FileRoutesByFullPath {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/configuracion': typeof AuthenticatedConfiguracionRoute
+  '/delegados': typeof AuthenticatedDelegadosRoute
   '/mesas': typeof AuthenticatedMesasRoute
   '/resultados': typeof AuthenticatedResultadosRoute
   '/users': typeof AuthenticatedUsersRouteWithChildren
@@ -268,6 +275,7 @@ export interface FileRoutesByTo {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/configuracion': typeof AuthenticatedConfiguracionRoute
+  '/delegados': typeof AuthenticatedDelegadosRoute
   '/mesas': typeof AuthenticatedMesasRoute
   '/resultados': typeof AuthenticatedResultadosRoute
   '/': typeof AuthenticatedIndexRoute
@@ -304,6 +312,7 @@ export interface FileRoutesById {
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
   '/_authenticated/configuracion': typeof AuthenticatedConfiguracionRoute
+  '/_authenticated/delegados': typeof AuthenticatedDelegadosRoute
   '/_authenticated/mesas': typeof AuthenticatedMesasRoute
   '/_authenticated/resultados': typeof AuthenticatedResultadosRoute
   '/_authenticated/users': typeof AuthenticatedUsersRouteWithChildren
@@ -340,6 +349,7 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/configuracion'
+    | '/delegados'
     | '/mesas'
     | '/resultados'
     | '/users'
@@ -371,6 +381,7 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/configuracion'
+    | '/delegados'
     | '/mesas'
     | '/resultados'
     | '/'
@@ -406,6 +417,7 @@ export interface FileRouteTypes {
     | '/(errors)/500'
     | '/(errors)/503'
     | '/_authenticated/configuracion'
+    | '/_authenticated/delegados'
     | '/_authenticated/mesas'
     | '/_authenticated/resultados'
     | '/_authenticated/users'
@@ -483,6 +495,13 @@ declare module '@tanstack/react-router' {
       path: '/mesas'
       fullPath: '/mesas'
       preLoaderRoute: typeof AuthenticatedMesasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/delegados': {
+      id: '/_authenticated/delegados'
+      path: '/delegados'
+      fullPath: '/delegados'
+      preLoaderRoute: typeof AuthenticatedDelegadosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/configuracion': {
@@ -721,6 +740,7 @@ const AuthenticatedUsersRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
   AuthenticatedConfiguracionRoute: typeof AuthenticatedConfiguracionRoute
+  AuthenticatedDelegadosRoute: typeof AuthenticatedDelegadosRoute
   AuthenticatedMesasRoute: typeof AuthenticatedMesasRoute
   AuthenticatedResultadosRoute: typeof AuthenticatedResultadosRoute
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRouteWithChildren
@@ -735,6 +755,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
   AuthenticatedConfiguracionRoute: AuthenticatedConfiguracionRoute,
+  AuthenticatedDelegadosRoute: AuthenticatedDelegadosRoute,
   AuthenticatedMesasRoute: AuthenticatedMesasRoute,
   AuthenticatedResultadosRoute: AuthenticatedResultadosRoute,
   AuthenticatedUsersRoute: AuthenticatedUsersRouteWithChildren,
