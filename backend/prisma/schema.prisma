@@ -1,0 +1,92 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  TRANSCRIPTOR
+  AYUDANTE
+  VISOR
+}
+
+enum EstadoMesa {
+  PENDIENTE
+  EN_CARGA
+  CARGADA
+}
+
+model User {
+  id           String     @id @default(uuid())
+  name         String
+  username     String     @unique
+  passwordHash String
+  role         Role       @default(VISOR)
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+
+  mesasEnEdicion Mesa[]
+  actasSubidas   ActaMesa[]
+}
+
+model Cargo {
+  id          String      @id @default(uuid())
+  nombre      String
+  descripcion String?
+  createdAt   DateTime    @default(now())
+
+  candidatos  Candidato[]
+}
+
+model Candidato {
+  id        String     @id @default(uuid())
+  nombre    String
+  lista     String
+  cargoId   String
+  cargo     Cargo      @relation(fields: [cargoId], references: [id], onDelete: Cascade)
+  esPropio  Boolean    @default(false)
+  createdAt DateTime   @default(now())
+
+  votos     VotoMesa[]
+}
+
+model Mesa {
+  id             String      @id @default(uuid())
+  codigo         String      @unique
+  facultad       String
+  ubicacion      String
+  totalPadron    Int
+  estado         EstadoMesa  @default(PENDIENTE)
+  transcriptorId String?
+  transcriptor   User?       @relation(fields: [transcriptorId], references: [id])
+  updatedAt      DateTime    @updatedAt
+
+  votos          VotoMesa[]
+  actas          ActaMesa[]
+}
+
+model VotoMesa {
+  id          String    @id @default(uuid())
+  mesaId      String
+  mesa        Mesa      @relation(fields: [mesaId], references: [id], onDelete: Cascade)
+  candidatoId String
+  candidato   Candidato @relation(fields: [candidatoId], references: [id], onDelete: Cascade)
+  cantidad    Int       @default(0)
+
+  @@unique([mesaId, candidatoId])
+}
+
+model ActaMesa {
+  id            String   @id @default(uuid())
+  mesaId        String
+  mesa          Mesa     @relation(fields: [mesaId], references: [id], onDelete: Cascade)
+  fotoUrl       String
+  observaciones String?
+  subidoPorId   String
+  subidoPor     User     @relation(fields: [subidoPorId], references: [id])
+  createdAt     DateTime @default(now())
+}
