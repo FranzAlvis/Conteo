@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: conteo_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: conteo_user
+      POSTGRES_PASSWORD: conteo_password
+      POSTGRES_DB: conteo_votos_db
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  adminer:
+    image: adminer
+    container_name: conteo_adminer
+    restart: always
+    ports:
+      - '8080:8080'
+
+volumes:
+  postgres_data:
