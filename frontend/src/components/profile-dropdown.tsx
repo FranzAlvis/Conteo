@@ -15,17 +15,20 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { LogOut, KeyRound, User as UserIcon } from 'lucide-react'
 import { ChangePasswordDialog } from '@/components/change-password-dialog'
+import { EditProfileDialog } from '@/components/edit-profile-dialog'
 import { toast } from 'sonner'
 
 export function ProfileDropdown() {
   const { auth } = useAuthStore()
   const navigate = useNavigate()
   const [openPasswordDialog, setOpenPasswordDialog] = useState(false)
+  const [openProfileDialog, setOpenProfileDialog] = useState(false)
 
   const user = auth.user || {
     name: 'Yamile Hayes Michel',
     username: 'admin',
     role: 'ADMIN',
+    avatar: '',
   }
 
   const roleName = Array.isArray(user.role)
@@ -46,7 +49,7 @@ export function ProfileDropdown() {
         <DropdownMenuTrigger asChild>
           <Button variant='ghost' className='relative h-9 w-9 rounded-full border border-border/60 hover:bg-accent'>
             <Avatar className='h-8 w-8'>
-              <AvatarImage src='/avatars/01.png' alt={user.name} />
+              <AvatarImage src={user.avatar || '/avatars/01.png'} alt={user.name} />
               <AvatarFallback className='bg-primary text-primary-foreground font-bold text-xs'>
                 {user.name ? user.name.slice(0, 2).toUpperCase() : 'YH'}
               </AvatarFallback>
@@ -79,6 +82,14 @@ export function ProfileDropdown() {
           <DropdownMenuGroup>
             <DropdownMenuItem
               className='text-xs cursor-pointer py-2 font-medium'
+              onClick={() => setOpenProfileDialog(true)}
+            >
+              <UserIcon className='mr-2 h-4 w-4 text-primary' />
+              Mi Perfil (Foto Base64)
+            </DropdownMenuItem>
+
+            <DropdownMenuItem
+              className='text-xs cursor-pointer py-2 font-medium'
               onClick={() => setOpenPasswordDialog(true)}
             >
               <KeyRound className='mr-2 h-4 w-4 text-primary' />
@@ -98,6 +109,12 @@ export function ProfileDropdown() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {/* Dialog para editar perfil y subir foto Base64 */}
+      <EditProfileDialog
+        open={openProfileDialog}
+        onOpenChange={setOpenProfileDialog}
+      />
 
       {/* Dialog para cambio de contraseña */}
       <ChangePasswordDialog

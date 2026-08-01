@@ -27,6 +27,7 @@ model User {
   passwordHash String
   role         Role       @default(VISOR)
   isActive     Boolean    @default(true)
+  avatar       String?
   createdAt    DateTime   @default(now())
 
   mesasEnEdicion Mesa[]

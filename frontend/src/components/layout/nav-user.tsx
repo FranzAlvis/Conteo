@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { ChevronsUpDown, KeyRound, LogOut } from 'lucide-react'
+import { ChevronsUpDown, KeyRound, LogOut, User as UserIcon } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/sidebar'
 import { useAuthStore } from '@/stores/auth-store'
 import { ChangePasswordDialog } from '@/components/change-password-dialog'
+import { EditProfileDialog } from '@/components/edit-profile-dialog'
 import { toast } from 'sonner'
 
 type NavUserProps = {
@@ -35,11 +36,13 @@ export function NavUser({ user }: NavUserProps) {
   const { auth } = useAuthStore()
   const navigate = useNavigate()
   const [openPasswordDialog, setOpenPasswordDialog] = useState(false)
+  const [openProfileDialog, setOpenProfileDialog] = useState(false)
 
   const currentUser = auth.user || {
     name: user.name || 'Yamile Hayes Michel',
     username: 'admin',
     role: 'ADMIN',
+    avatar: '',
   }
 
   const roleName = Array.isArray(currentUser.role)
@@ -65,7 +68,7 @@ export function NavUser({ user }: NavUserProps) {
                 className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
               >
                 <Avatar className='h-8 w-8 rounded-lg'>
-                  <AvatarImage src={user.avatar} alt={currentUser.name} />
+                  <AvatarImage src={currentUser.avatar || user.avatar || '/avatars/01.png'} alt={currentUser.name} />
                   <AvatarFallback className='bg-primary text-primary-foreground font-bold text-xs rounded-lg'>
                     {currentUser.name ? currentUser.name.slice(0, 2).toUpperCase() : 'YH'}
                   </AvatarFallback>
@@ -88,7 +91,7 @@ export function NavUser({ user }: NavUserProps) {
               <DropdownMenuLabel className='p-2.5 font-normal'>
                 <div className='flex items-center gap-2 text-start text-sm'>
                   <Avatar className='h-8 w-8 rounded-lg'>
-                    <AvatarImage src={user.avatar} alt={currentUser.name} />
+                    <AvatarImage src={currentUser.avatar || user.avatar || '/avatars/01.png'} alt={currentUser.name} />
                     <AvatarFallback className='bg-primary text-primary-foreground font-bold text-xs rounded-lg'>
                       {currentUser.name ? currentUser.name.slice(0, 2).toUpperCase() : 'YH'}
                     </AvatarFallback>
@@ -108,6 +111,14 @@ export function NavUser({ user }: NavUserProps) {
               <DropdownMenuSeparator />
 
               <DropdownMenuGroup>
+                <DropdownMenuItem
+                  className='text-xs cursor-pointer py-2 font-medium'
+                  onClick={() => setOpenProfileDialog(true)}
+                >
+                  <UserIcon className='mr-2 h-4 w-4 text-primary' />
+                  Mi Perfil (Foto Base64)
+                </DropdownMenuItem>
+
                 <DropdownMenuItem
                   className='text-xs cursor-pointer py-2 font-medium'
                   onClick={() => setOpenPasswordDialog(true)}
@@ -131,6 +142,12 @@ export function NavUser({ user }: NavUserProps) {
           </DropdownMenu>
         </SidebarMenuItem>
       </SidebarMenu>
+
+      {/* Dialog para editar perfil y subir foto Base64 */}
+      <EditProfileDialog
+        open={openProfileDialog}
+        onOpenChange={setOpenProfileDialog}
+      />
 
       {/* Dialog para cambio de contraseña */}
       <ChangePasswordDialog
