@@ -85,7 +85,7 @@ export function ProfileDropdown() {
               onClick={() => setOpenProfileDialog(true)}
             >
               <UserIcon className='mr-2 h-4 w-4 text-primary' />
-              Mi Perfil (Foto Base64)
+              Mi Perfil
             </DropdownMenuItem>
 
             <DropdownMenuItem

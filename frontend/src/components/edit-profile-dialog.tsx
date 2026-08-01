@@ -60,7 +60,7 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
     reader.onload = (event) => {
       const base64String = event.target?.result as string
       setAvatarPreview(base64String)
-      toast.info('Vista previa de avatar cargada en Base64')
+      toast.info('Foto de perfil seleccionada correctamente')
     }
     reader.readAsDataURL(file)
   }
@@ -83,7 +83,7 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
         avatar: avatarPreview,
       })
       setIsLoading(false)
-      toast.success('Perfil e foto en Base64 actualizados correctamente')
+      toast.success('Perfil actualizado correctamente')
       onOpenChange(false)
     }, 600)
   }
@@ -97,7 +97,7 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
             Mi Perfil de Usuario
           </DialogTitle>
           <DialogDescription className='text-xs'>
-            Actualice la foto de su perfil (subida y almacenada en formato Base64) y datos personales.
+            Actualice su foto de perfil y sus datos personales.
           </DialogDescription>
         </DialogHeader>
 
@@ -137,7 +137,7 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
                 onClick={() => fileInputRef.current?.click()}
                 className='text-xs font-semibold gap-1.5'
               >
-                <Upload className='h-3.5 w-3.5 text-primary' /> Subir Foto (Base64)
+                <Upload className='h-3.5 w-3.5 text-primary' /> Cambiar Foto
               </Button>
 
               {avatarPreview && (
@@ -155,7 +155,7 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
 
             {avatarPreview && (
               <span className='text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-300/40'>
-                <CheckCircle2 className='h-3 w-3' /> Imagen lista en Base64
+                <CheckCircle2 className='h-3 w-3' /> Foto de perfil seleccionada
               </span>
             )}
           </div>
@@ -204,7 +204,7 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
             </Button>
             <Button type='submit' className='text-xs font-bold' disabled={isLoading}>
               {isLoading && <Loader2 className='h-4 w-4 animate-spin mr-1' />}
-              Guardar Cambios de Perfil
+              Guardar Cambios
             </Button>
           </DialogFooter>
         </form>
