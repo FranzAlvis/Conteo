@@ -220,57 +220,63 @@ export function DelegadosFeature() {
           </CardHeader>
 
           <CardContent>
-            <div className='rounded-md border overflow-hidden'>
+            <div className='rounded-md border overflow-x-auto'>
               <Table>
                 <TableHeader className='bg-muted/40'>
                   <TableRow>
-                    <TableHead className='font-semibold text-xs'>Nombre Completo</TableHead>
-                    <TableHead className='font-semibold text-xs'>Carnet de Identidad (CI)</TableHead>
-                    <TableHead className='font-semibold text-xs'>Celular</TableHead>
-                    <TableHead className='font-semibold text-xs'>Correo Electrónico</TableHead>
-                    <TableHead className='font-semibold text-xs text-center'>Mesa Asignada</TableHead>
-                    <TableHead className='font-semibold text-xs text-center'>Estado Activo</TableHead>
-                    <TableHead className='font-semibold text-xs text-right'>Acciones</TableHead>
+                    <TableHead className='font-semibold text-xs py-3 w-[220px]'>Nombre Completo</TableHead>
+                    <TableHead className='font-semibold text-xs py-3 w-[140px]'>Carnet (CI)</TableHead>
+                    <TableHead className='font-semibold text-xs py-3 w-[130px]'>Celular</TableHead>
+                    <TableHead className='font-semibold text-xs py-3 w-[200px]'>Correo Electrónico</TableHead>
+                    <TableHead className='font-semibold text-xs py-3 text-center w-[140px]'>Mesa Asignada</TableHead>
+                    <TableHead className='font-semibold text-xs py-3 text-center w-[120px]'>Estado Activo</TableHead>
+                    <TableHead className='font-semibold text-xs py-3 text-right w-[100px]'>Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredDelegados.map((d) => (
                     <TableRow key={d.id} className='hover:bg-muted/30'>
-                      <TableCell className='font-bold text-xs text-foreground flex items-center gap-2'>
-                        <UserCheck className='h-4 w-4 text-primary' />
-                        {d.nombre}
+                      <TableCell className='font-bold text-xs text-foreground py-3'>
+                        <div className='flex items-center gap-2'>
+                          <UserCheck className='h-4 w-4 text-primary shrink-0' />
+                          <span>{d.nombre}</span>
+                        </div>
                       </TableCell>
-                      <TableCell className='text-xs font-mono text-muted-foreground flex items-center gap-1'>
-                        <CreditCard className='h-3 w-3 text-muted-foreground' />
-                        {d.ci}
+                      <TableCell className='text-xs font-mono text-muted-foreground py-3'>
+                        <div className='flex items-center gap-1.5'>
+                          <CreditCard className='h-3.5 w-3.5 text-muted-foreground shrink-0' />
+                          <span>{d.ci}</span>
+                        </div>
                       </TableCell>
-                      <TableCell className='text-xs font-medium text-foreground flex items-center gap-1'>
-                        <Phone className='h-3 w-3 text-muted-foreground' />
-                        {d.celular}
+                      <TableCell className='text-xs font-medium text-foreground py-3'>
+                        <div className='flex items-center gap-1.5'>
+                          <Phone className='h-3.5 w-3.5 text-muted-foreground shrink-0' />
+                          <span>{d.celular}</span>
+                        </div>
                       </TableCell>
-                      <TableCell className='text-xs text-muted-foreground'>
+                      <TableCell className='text-xs text-muted-foreground py-3'>
                         {d.correo ? (
-                          <span className='flex items-center gap-1'>
-                            <Mail className='h-3 w-3 text-muted-foreground' />
-                            {d.correo}
-                          </span>
+                          <div className='flex items-center gap-1.5'>
+                            <Mail className='h-3.5 w-3.5 text-muted-foreground shrink-0' />
+                            <span>{d.correo}</span>
+                          </div>
                         ) : (
                           <span className='italic text-[11px] text-muted-foreground/60'>No registrado</span>
                         )}
                       </TableCell>
-                      <TableCell className='text-center'>
-                        <Badge variant='outline' className='bg-primary/10 text-primary border-primary/30 font-bold text-xs gap-1'>
+                      <TableCell className='text-center py-3'>
+                        <Badge variant='outline' className='bg-primary/10 text-primary border-primary/30 font-bold text-xs gap-1 inline-flex items-center'>
                           <Vote className='h-3 w-3' />
                           {d.mesaCodigo}
                         </Badge>
                       </TableCell>
-                      <TableCell className='text-center'>
+                      <TableCell className='text-center py-3'>
                         <Switch
                           checked={d.isActive}
                           onCheckedChange={() => handleToggleStatus(d.id)}
                         />
                       </TableCell>
-                      <TableCell className='text-right space-x-1'>
+                      <TableCell className='text-right py-3 space-x-1'>
                         <Button
                           variant='ghost'
                           size='sm'
