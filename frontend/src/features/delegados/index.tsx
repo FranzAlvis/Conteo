@@ -45,6 +45,7 @@ import {
   Printer,
   FileText,
   MessageSquare,
+  Clock,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useForm } from 'react-hook-form'
@@ -58,7 +59,7 @@ export interface DelegadoItem {
   ci: string
   celular: string
   correo?: string
-  mesaCodigo: string
+  mesaCodigo?: string
   transcriptorNombre?: string
   isActive: boolean
 }
@@ -90,9 +91,8 @@ const initialDelegados: DelegadoItem[] = [
     ci: '7491028 CH',
     celular: '76543210',
     correo: 'mariana.paz@usfx.edu.bo',
-    mesaCodigo: 'MESA-03',
-    transcriptorNombre: 'María Elena Torrez',
-    isActive: false,
+    mesaCodigo: '', // Sin mesa asignada por ahora
+    isActive: true,
   },
   {
     id: 'd4',
@@ -111,7 +111,7 @@ const delegadoSchema = z.object({
   ci: z.string().min(1, 'El CI es requerido'),
   celular: z.string().min(1, 'El número de celular es requerido'),
   correo: z.string().email('Correo no válido').optional().or(z.literal('')),
-  mesaCodigo: z.string().min(1, 'Seleccione una mesa asignada'),
+  mesaCodigo: z.string().optional(),
 })
 
 type DelegadoFormValues = z.infer<typeof delegadoSchema>
@@ -139,7 +139,7 @@ export function DelegadosFeature() {
     (d) =>
       d.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       d.ci.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      d.mesaCodigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (d.mesaCodigo && d.mesaCodigo.toLowerCase().includes(searchTerm.toLowerCase())) ||
       d.celular.includes(searchTerm)
   )
 
@@ -156,7 +156,7 @@ export function DelegadosFeature() {
       ci: delegado.ci,
       celular: delegado.celular,
       correo: delegado.correo || '',
-      mesaCodigo: delegado.mesaCodigo,
+      mesaCodigo: delegado.mesaCodigo || '',
     })
     setOpenModal(true)
   }
@@ -188,7 +188,7 @@ export function DelegadosFeature() {
                 ci: values.ci,
                 celular: values.celular,
                 correo: values.correo,
-                mesaCodigo: values.mesaCodigo,
+                mesaCodigo: values.mesaCodigo || '',
               }
             : d
         )
@@ -201,7 +201,7 @@ export function DelegadosFeature() {
         ci: values.ci,
         celular: values.celular,
         correo: values.correo,
-        mesaCodigo: values.mesaCodigo,
+        mesaCodigo: values.mesaCodigo || '',
         isActive: true,
       }
       setDelegadosList((prev) => [...prev, newDelegado])
@@ -229,7 +229,7 @@ export function DelegadosFeature() {
           <div>
             <h2 className='text-2xl font-bold tracking-tight'>Delegados Electorales</h2>
             <p className='text-xs text-muted-foreground mt-0.5'>
-              Representantes de mesa acreditados, celulares de coordinación y transcriptor asignado.
+              Registro previo de delegados. La asignación de mesa puede realizarse ahora o previo al día de la elección.
             </p>
           </div>
 
@@ -270,7 +270,7 @@ export function DelegadosFeature() {
                     <TableHead className='font-semibold text-xs py-3 w-[130px]'>Carnet (CI)</TableHead>
                     <TableHead className='font-semibold text-xs py-3 w-[150px]'>Teléfono Celular</TableHead>
                     <TableHead className='font-semibold text-xs py-3 w-[180px]'>Transcriptor Responsable</TableHead>
-                    <TableHead className='font-semibold text-xs py-3 text-center w-[130px]'>Mesa Asignada</TableHead>
+                    <TableHead className='font-semibold text-xs py-3 text-center w-[150px]'>Mesa Asignada</TableHead>
                     <TableHead className='font-semibold text-xs py-3 text-center w-[100px]'>Estado</TableHead>
                     <TableHead className='font-semibold text-xs py-3 text-right w-[100px]'>Acciones</TableHead>
                   </TableRow>
@@ -313,15 +313,21 @@ export function DelegadosFeature() {
                         {d.transcriptorNombre ? (
                           <span className='font-semibold text-foreground'>{d.transcriptorNombre}</span>
                         ) : (
-                          <span className='italic text-[11px] text-muted-foreground'>Sin asignar</span>
+                          <span className='italic text-[11px] text-muted-foreground'>Sin transcriptor</span>
                         )}
                       </TableCell>
 
                       <TableCell className='text-center py-3'>
-                        <Badge variant='outline' className='bg-primary/10 text-primary border-primary/30 font-bold text-xs gap-1 inline-flex items-center'>
-                          <Vote className='h-3 w-3' />
-                          {d.mesaCodigo}
-                        </Badge>
+                        {d.mesaCodigo ? (
+                          <Badge variant='outline' className='bg-primary/10 text-primary border-primary/30 font-bold text-xs gap-1 inline-flex items-center'>
+                            <Vote className='h-3 w-3' />
+                            {d.mesaCodigo}
+                          </Badge>
+                        ) : (
+                          <Badge variant='outline' className='bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 font-bold text-[11px] gap-1 inline-flex items-center'>
+                            <Clock className='h-3 w-3' /> Sin Mesa (Pendiente)
+                          </Badge>
+                        )}
                       </TableCell>
 
                       <TableCell className='text-center py-3'>
@@ -367,7 +373,7 @@ export function DelegadosFeature() {
               {editingDelegado ? 'Editar Delegado' : 'Registrar Nuevo Delegado'}
             </DialogTitle>
             <DialogDescription className='text-xs'>
-              Ingrese la información de contacto y asignación de mesa para el delegado electoral.
+              Ingrese la información del delegado. La asignación de mesa es opcional.
             </DialogDescription>
           </DialogHeader>
 
@@ -395,15 +401,18 @@ export function DelegadosFeature() {
             </div>
 
             <div className='space-y-1.5'>
-              <Label className='text-xs font-semibold'>Mesa Asignada *</Label>
+              <Label className='text-xs font-semibold'>Mesa Asignada (Opcional por ahora)</Label>
               <Select
-                value={form.watch('mesaCodigo')}
-                onValueChange={(val) => form.setValue('mesaCodigo', val)}
+                value={form.watch('mesaCodigo') || 'SIN_ASIGNAR'}
+                onValueChange={(val) => form.setValue('mesaCodigo', val === 'SIN_ASIGNAR' ? '' : val)}
               >
                 <SelectTrigger className='text-xs'>
-                  <SelectValue placeholder='Seleccione mesa asignada...' />
+                  <SelectValue placeholder='Seleccione mesa (o dejar sin asignar)...' />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value='SIN_ASIGNAR' className='text-xs text-amber-600 font-bold'>
+                    -- Sin Mesa Asignada por Ahora --
+                  </SelectItem>
                   {ultimasMesas.map((m) => (
                     <SelectItem key={m.id} value={m.codigo} className='text-xs'>
                       {m.codigo} — {m.facultad}
@@ -477,7 +486,7 @@ export function DelegadosFeature() {
                       <td className='p-2 border-r font-bold text-xs'>{d.nombre}</td>
                       <td className='p-2 border-r font-mono text-[11px]'>{d.ci}</td>
                       <td className='p-2 border-r font-mono text-[11px]'>+591 {d.celular}</td>
-                      <td className='p-2 border-r text-center font-bold text-xs'>{d.mesaCodigo}</td>
+                      <td className='p-2 border-r text-center font-bold text-xs'>{d.mesaCodigo || 'Pendiente'}</td>
                       <td className='p-2 border-r text-[11px]'>{d.transcriptorNombre || 'Sin asignar'}</td>
                       <td className='p-2 text-center font-bold text-[10px]'>
                         {d.isActive ? 'ACTIVO' : 'INACTIVO'}
@@ -534,7 +543,7 @@ export function DelegadosFeature() {
                 <td className='p-2 border border-black font-bold text-xs text-black'>{d.nombre}</td>
                 <td className='p-2 border border-black font-mono text-[11px] text-black'>{d.ci}</td>
                 <td className='p-2 border border-black font-mono text-[11px] text-black'>+591 {d.celular}</td>
-                <td className='p-2 border border-black text-center font-bold text-xs text-black'>{d.mesaCodigo}</td>
+                <td className='p-2 border border-black text-center font-bold text-xs text-black'>{d.mesaCodigo || 'Pendiente'}</td>
                 <td className='p-2 border border-black font-medium text-[11px] text-black'>
                   {d.transcriptorNombre || 'Sin asignar'}
                 </td>

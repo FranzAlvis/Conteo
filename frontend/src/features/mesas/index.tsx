@@ -7,7 +7,7 @@ import { LiveStatusBadge } from '@/components/live-status-badge'
 import { useElectionStore } from '@/stores/election-store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -33,7 +33,27 @@ import {
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
-import { Search, PlusCircle, Vote, Upload, CheckCircle2, Clock, AlertCircle, FileText, Lock } from 'lucide-react'
+import {
+  Search,
+  PlusCircle,
+  Vote,
+  Upload,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  FileText,
+  Lock,
+  Stethoscope,
+  Scale,
+  Laptop,
+  Sprout,
+  Calculator,
+  TrendingUp,
+  Smile,
+  Award,
+  FilterX,
+  Building2,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -50,9 +70,22 @@ const cargarMesaSchema = z.object({
 
 type CargarMesaFormValues = z.infer<typeof cargarMesaSchema>
 
+// Defined USFX Faculties with icons and standard search terms
+const FACULTADES_MAP = [
+  { id: 'medicina', nombre: 'Facultad de Medicina', keyword: 'Medicina', icon: Stethoscope, color: 'text-rose-500 bg-rose-500/10 border-rose-500/30' },
+  { id: 'derecho', nombre: 'Facultad de Derecho', keyword: 'Derecho', icon: Scale, color: 'text-amber-600 bg-amber-500/10 border-amber-500/30' },
+  { id: 'tecnologia', nombre: 'Facultad de Tecnología', keyword: 'Tecnología', icon: Laptop, color: 'text-blue-500 bg-blue-500/10 border-blue-500/30' },
+  { id: 'agrarias', nombre: 'Ciencias Agrarias', keyword: 'Agrarias', icon: Sprout, color: 'text-emerald-600 bg-emerald-500/10 border-emerald-500/30' },
+  { id: 'contaduria', nombre: 'Contaduría Pública', keyword: 'Contaduría', icon: Calculator, color: 'text-cyan-600 bg-cyan-500/10 border-cyan-500/30' },
+  { id: 'economia', nombre: 'Ciencias Económicas', keyword: 'Economía', icon: TrendingUp, color: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/30' },
+  { id: 'odontologia', nombre: 'Facultad de Odontología', keyword: 'Odontología', icon: Smile, color: 'text-teal-600 bg-teal-500/10 border-teal-500/30' },
+  { id: 'docentes', nombre: 'Mesa Docentes USFX', keyword: 'Docente', icon: Award, color: 'text-purple-600 bg-purple-500/10 border-purple-500/30', isSpecial: true },
+]
+
 export function MesasFeature() {
   const { ultimasMesas, cargarNuevaMesa } = useElectionStore()
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedFacultad, setSelectedFacultad] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState('TODOS')
   const [openModal, setOpenModal] = useState(false)
   const [actaFileName, setActaFileName] = useState<string | null>(null)
@@ -73,8 +106,13 @@ export function MesasFeature() {
     const matchesSearch =
       m.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       m.facultad.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesFacultad = selectedFacultad
+      ? m.facultad.toLowerCase().includes(selectedFacultad.toLowerCase())
+      : true
+
     const matchesStatus = statusFilter === 'TODOS' || m.estado === statusFilter
-    return matchesSearch && matchesStatus
+    return matchesSearch && matchesFacultad && matchesStatus
   })
 
   function onSubmit(values: CargarMesaFormValues) {
@@ -91,10 +129,10 @@ export function MesasFeature() {
     }
 
     const votosMap: Record<string, number> = {
-      '1': values.votosYamile,
-      '2': values.votosMendoza,
-      '3': values.votosSoliz,
-      '4': values.votosBlanco,
+      c1: values.votosYamile,
+      c2: values.votosMendoza,
+      c3: values.votosSoliz,
+      c4: values.votosBlanco,
     }
 
     cargarNuevaMesa(
@@ -102,6 +140,8 @@ export function MesasFeature() {
         id: values.mesaId,
         codigo: mesaSeleccionada?.codigo || 'MESA-NUEVA',
         facultad: mesaSeleccionada?.facultad || 'Facultad General',
+        tipo: mesaSeleccionada?.tipo || 'ESTUDIANTIL',
+        ponderacion: mesaSeleccionada?.ponderacion || 1,
         transcriptor: 'Transcriptor Actual',
         hora: new Date().toLocaleTimeString(),
         estado: 'CARGADA',
@@ -133,16 +173,88 @@ export function MesasFeature() {
       <Main className='space-y-6 p-4 sm:p-6'>
         <div className='flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4'>
           <div>
-            <h2 className='text-2xl font-bold tracking-tight'>Mesas Electorales</h2>
+            <h2 className='text-2xl font-bold tracking-tight'>Mesas Electorales por Facultad</h2>
             <p className='text-xs text-muted-foreground mt-0.5'>
-              Transcripción de actas oficiales y control de estado de escrutinio por facultad.
+              Mapa visual de facultades USFX, distribución de mesas de votación y transcripción de actas.
             </p>
           </div>
-          <Button onClick={() => setOpenModal(true)} className='font-semibold gap-2 shadow-sm'>
+          <Button onClick={() => setOpenModal(true)} className='font-semibold gap-2 shadow-sm text-xs'>
             <PlusCircle className='h-4 w-4' /> Cargar Acta de Mesa
           </Button>
         </div>
 
+        {/* MAPA VISUAL DE FACULTADES USFX */}
+        <div className='space-y-3'>
+          <div className='flex items-center justify-between'>
+            <p className='text-xs font-extrabold uppercase tracking-wider text-muted-foreground flex items-center gap-2'>
+              <Building2 className='h-4 w-4 text-primary' /> Mapa Electoral de Facultades USFX
+            </p>
+            {selectedFacultad && (
+              <Button
+                variant='ghost'
+                size='sm'
+                onClick={() => setSelectedFacultad(null)}
+                className='h-7 text-xs text-primary font-bold gap-1 hover:bg-primary/10'
+              >
+                <FilterX className='h-3.5 w-3.5' /> Mostrar Todas las Facultades
+              </Button>
+            )}
+          </div>
+
+          <div className='grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3'>
+            {FACULTADES_MAP.map((fac) => {
+              const IconComponent = fac.icon
+              const countMesas = ultimasMesas.filter((m) =>
+                m.facultad.toLowerCase().includes(fac.keyword.toLowerCase())
+              ).length
+              const countCargadas = ultimasMesas.filter(
+                (m) =>
+                  m.facultad.toLowerCase().includes(fac.keyword.toLowerCase()) &&
+                  m.estado === 'CARGADA'
+              ).length
+
+              const isSelected = selectedFacultad === fac.keyword
+
+              return (
+                <Card
+                  key={fac.id}
+                  onClick={() => setSelectedFacultad(isSelected ? null : fac.keyword)}
+                  className={`cursor-pointer transition-all hover:scale-105 ${
+                    isSelected
+                      ? 'border-primary ring-2 ring-primary/40 bg-primary/5 shadow-md'
+                      : 'border-border/60 hover:border-primary/40 bg-card'
+                  }`}
+                >
+                  <CardContent className='p-3 text-center space-y-2'>
+                    <div className={`mx-auto h-9 w-9 rounded-xl flex items-center justify-center border ${fac.color}`}>
+                      <IconComponent className='h-5 w-5' />
+                    </div>
+                    <div>
+                      <p className='text-xs font-bold text-foreground leading-tight truncate'>{fac.nombre}</p>
+                      <p className='text-[10px] text-muted-foreground font-semibold pt-0.5'>
+                        {countMesas > 0 ? `${countMesas} mesas` : 'Sin mesas'}
+                      </p>
+                    </div>
+                    {countMesas > 0 && (
+                      <Badge
+                        variant='outline'
+                        className={`text-[9px] font-bold px-1.5 py-0 ${
+                          countCargadas === countMesas
+                            ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
+                            : 'bg-amber-500/10 text-amber-600 border-amber-500/30'
+                        }`}
+                      >
+                        {countCargadas}/{countMesas} Cargadas
+                      </Badge>
+                    )}
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* TABLA DE MESAS FILTRADAS */}
         <Card className='border-border/60 shadow-sm'>
           <CardHeader className='pb-4'>
             <div className='flex flex-col sm:flex-row items-center justify-between gap-3'>
@@ -174,34 +286,46 @@ export function MesasFeature() {
           </CardHeader>
 
           <CardContent>
-            <div className='rounded-md border overflow-hidden'>
+            <div className='rounded-md border overflow-x-auto'>
               <Table>
                 <TableHeader className='bg-muted/40'>
                   <TableRow>
-                    <TableHead className='font-semibold text-xs'>Código Mesa</TableHead>
-                    <TableHead className='font-semibold text-xs'>Facultad / Ubicación</TableHead>
-                    <TableHead className='font-semibold text-xs'>Transcriptor</TableHead>
-                    <TableHead className='font-semibold text-xs text-center'>Votos Registrados</TableHead>
-                    <TableHead className='font-semibold text-xs text-center'>Última Act.</TableHead>
-                    <TableHead className='font-semibold text-xs text-right'>Estado</TableHead>
+                    <TableHead className='font-semibold text-xs py-3 w-[120px]'>Código Mesa</TableHead>
+                    <TableHead className='font-semibold text-xs py-3 w-[220px]'>Facultad / Ubicación</TableHead>
+                    <TableHead className='font-semibold text-xs py-3 w-[120px]'>Tipo Sector</TableHead>
+                    <TableHead className='font-semibold text-xs py-3 w-[180px]'>Transcriptor Encargado</TableHead>
+                    <TableHead className='font-semibold text-xs py-3 text-center w-[120px]'>Votos Registrados</TableHead>
+                    <TableHead className='font-semibold text-xs py-3 text-center w-[110px]'>Última Act.</TableHead>
+                    <TableHead className='font-semibold text-xs py-3 text-right w-[110px]'>Estado</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredMesas.map((m) => (
                     <TableRow key={m.id} className='hover:bg-muted/30'>
-                      <TableCell className='font-bold text-xs flex items-center gap-1.5'>
+                      <TableCell className='font-bold text-xs flex items-center gap-1.5 py-3'>
                         <Lock className='h-3.5 w-3.5 text-muted-foreground' />
                         {m.codigo}
                       </TableCell>
-                      <TableCell className='text-xs text-muted-foreground'>{m.facultad}</TableCell>
-                      <TableCell className='text-xs font-medium'>{m.transcriptor}</TableCell>
-                      <TableCell className='text-xs text-center font-bold text-primary'>
+                      <TableCell className='text-xs text-muted-foreground py-3'>{m.facultad}</TableCell>
+                      <TableCell className='text-xs py-3'>
+                        {m.tipo === 'DOCENTE' ? (
+                          <Badge className='bg-purple-600 text-white font-bold text-[10px]'>
+                            Docente (x45)
+                          </Badge>
+                        ) : (
+                          <Badge variant='outline' className='text-[10px] font-semibold'>
+                            Estudiantil (x1)
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className='text-xs font-medium text-foreground py-3'>{m.transcriptor}</TableCell>
+                      <TableCell className='text-xs text-center font-bold text-primary py-3'>
                         {m.votosRegistrados ? m.votosRegistrados : '—'}
                       </TableCell>
-                      <TableCell className='text-xs text-center font-mono text-muted-foreground'>
+                      <TableCell className='text-xs text-center font-mono text-muted-foreground py-3'>
                         {m.hora}
                       </TableCell>
-                      <TableCell className='text-right'>
+                      <TableCell className='text-right py-3'>
                         {m.estado === 'CARGADA' && (
                           <Badge variant='outline' className='bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-[10px] uppercase font-bold gap-1'>
                             <CheckCircle2 className='h-3 w-3' /> Cargada
