@@ -53,11 +53,39 @@ import {
   Award,
   FilterX,
   Building2,
+  Plus,
+  Phone,
+  UserCheck,
+  MessageSquare,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+
+// Base Faculties list
+const FACULTADES_PREDEFINIDAS = [
+  { id: 'medicina', nombre: 'Facultad de Medicina', keyword: 'Medicina', icon: Stethoscope, color: 'text-rose-500 bg-rose-500/10 border-rose-500/30' },
+  { id: 'derecho', nombre: 'Facultad de Derecho', keyword: 'Derecho', icon: Scale, color: 'text-amber-600 bg-amber-500/10 border-amber-500/30' },
+  { id: 'tecnologia', nombre: 'Facultad de Tecnología', keyword: 'Tecnología', icon: Laptop, color: 'text-blue-500 bg-blue-500/10 border-blue-500/30' },
+  { id: 'agrarias', nombre: 'Ciencias Agrarias', keyword: 'Agrarias', icon: Sprout, color: 'text-emerald-600 bg-emerald-500/10 border-emerald-500/30' },
+  { id: 'contaduria', nombre: 'Contaduría Pública', keyword: 'Contaduría', icon: Calculator, color: 'text-cyan-600 bg-cyan-500/10 border-cyan-500/30' },
+  { id: 'economia', nombre: 'Ciencias Económicas', keyword: 'Economía', icon: TrendingUp, color: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/30' },
+  { id: 'odontologia', nombre: 'Facultad de Odontología', keyword: 'Odontología', icon: Smile, color: 'text-teal-600 bg-teal-500/10 border-teal-500/30' },
+  { id: 'docentes', nombre: 'Mesa Docentes USFX', keyword: 'Docente', icon: Award, color: 'text-purple-600 bg-purple-500/10 border-purple-500/30' },
+]
+
+// Schemas
+const crearMesaSchema = z.object({
+  codigo: z.string().min(1, 'El código de mesa es requerido'),
+  facultad: z.string().min(1, 'La facultad es requerida'),
+  tipo: z.enum(['ESTUDIANTIL', 'DOCENTE']),
+  transcriptor: z.string().optional(),
+})
+
+const crearFacultadSchema = z.object({
+  nombre: z.string().min(1, 'El nombre de la facultad es requerido'),
+})
 
 const cargarMesaSchema = z.object({
   mesaId: z.string().min(1, 'Seleccione una mesa'),
@@ -68,29 +96,37 @@ const cargarMesaSchema = z.object({
   observaciones: z.string().optional(),
 })
 
-type CargarMesaFormValues = z.infer<typeof cargarMesaSchema>
-
-// Defined USFX Faculties with icons and standard search terms
-const FACULTADES_MAP = [
-  { id: 'medicina', nombre: 'Facultad de Medicina', keyword: 'Medicina', icon: Stethoscope, color: 'text-rose-500 bg-rose-500/10 border-rose-500/30' },
-  { id: 'derecho', nombre: 'Facultad de Derecho', keyword: 'Derecho', icon: Scale, color: 'text-amber-600 bg-amber-500/10 border-amber-500/30' },
-  { id: 'tecnologia', nombre: 'Facultad de Tecnología', keyword: 'Tecnología', icon: Laptop, color: 'text-blue-500 bg-blue-500/10 border-blue-500/30' },
-  { id: 'agrarias', nombre: 'Ciencias Agrarias', keyword: 'Agrarias', icon: Sprout, color: 'text-emerald-600 bg-emerald-500/10 border-emerald-500/30' },
-  { id: 'contaduria', nombre: 'Contaduría Pública', keyword: 'Contaduría', icon: Calculator, color: 'text-cyan-600 bg-cyan-500/10 border-cyan-500/30' },
-  { id: 'economia', nombre: 'Ciencias Económicas', keyword: 'Economía', icon: TrendingUp, color: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/30' },
-  { id: 'odontologia', nombre: 'Facultad de Odontología', keyword: 'Odontología', icon: Smile, color: 'text-teal-600 bg-teal-500/10 border-teal-500/30' },
-  { id: 'docentes', nombre: 'Mesa Docentes USFX', keyword: 'Docente', icon: Award, color: 'text-purple-600 bg-purple-500/10 border-purple-500/30', isSpecial: true },
-]
-
 export function MesasFeature() {
-  const { ultimasMesas, cargarNuevaMesa } = useElectionStore()
+  const { ultimasMesas, asignaciones, facultadesCustom, crearMesa, crearFacultad, cargarNuevaMesa } = useElectionStore()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFacultad, setSelectedFacultad] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState('TODOS')
-  const [openModal, setOpenModal] = useState(false)
+
+  // Modals
+  const [openCrearMesaModal, setOpenCrearMesaModal] = useState(false)
+  const [openCrearFacultadModal, setOpenCrearFacultadModal] = useState(false)
+  const [openTranscribirModal, setOpenTranscribirModal] = useState(false)
   const [actaFileName, setActaFileName] = useState<string | null>(null)
 
-  const form = useForm<CargarMesaFormValues>({
+  // Forms
+  const crearMesaForm = useForm<z.infer<typeof crearMesaSchema>>({
+    resolver: zodResolver(crearMesaSchema),
+    defaultValues: {
+      codigo: '',
+      facultad: 'Facultad de Medicina',
+      tipo: 'ESTUDIANTIL',
+      transcriptor: 'Juan Carlos Pérez',
+    },
+  })
+
+  const crearFacultadForm = useForm<z.infer<typeof crearFacultadSchema>>({
+    resolver: zodResolver(crearFacultadSchema),
+    defaultValues: {
+      nombre: '',
+    },
+  })
+
+  const cargarMesaForm = useForm<z.infer<typeof cargarMesaSchema>>({
     resolver: zodResolver(cargarMesaSchema) as any,
     defaultValues: {
       mesaId: '',
@@ -102,11 +138,23 @@ export function MesasFeature() {
     },
   })
 
+  // Combine predefined and custom faculties
+  const todasLasFacultades = [
+    ...FACULTADES_PREDEFINIDAS,
+    ...facultadesCustom.map((f) => ({
+      id: f.id,
+      nombre: f.nombre,
+      keyword: f.keyword,
+      icon: Building2,
+      color: 'text-primary bg-primary/10 border-primary/30',
+    })),
+  ]
+
   const filteredMesas = ultimasMesas.filter((m) => {
     const matchesSearch =
       m.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       m.facultad.toLowerCase().includes(searchTerm.toLowerCase())
-    
+
     const matchesFacultad = selectedFacultad
       ? m.facultad.toLowerCase().includes(selectedFacultad.toLowerCase())
       : true
@@ -115,7 +163,31 @@ export function MesasFeature() {
     return matchesSearch && matchesFacultad && matchesStatus
   })
 
-  function onSubmit(values: CargarMesaFormValues) {
+  // Selected faculty mesas & delegados
+  const mesasDeFacultadSeleccionada = selectedFacultad
+    ? ultimasMesas.filter((m) => m.facultad.toLowerCase().includes(selectedFacultad.toLowerCase()))
+    : []
+
+  const onCrearMesaSubmit = (values: z.infer<typeof crearMesaSchema>) => {
+    crearMesa({
+      codigo: values.codigo,
+      facultad: values.facultad,
+      tipo: values.tipo,
+      transcriptor: values.transcriptor || 'Sin Asignar',
+    })
+    toast.success(`Mesa ${values.codigo} registrada correctamente en ${values.facultad}`)
+    setOpenCrearMesaModal(false)
+    crearMesaForm.reset()
+  }
+
+  const onCrearFacultadSubmit = (values: z.infer<typeof crearFacultadSchema>) => {
+    crearFacultad(values.nombre)
+    toast.success(`Facultad "${values.nombre}" agregada al Mapa Electoral`)
+    setOpenCrearFacultadModal(false)
+    crearFacultadForm.reset()
+  }
+
+  const onCargarMesaSubmit = (values: z.infer<typeof cargarMesaSchema>) => {
     const mesaSeleccionada = ultimasMesas.find((m) => m.id === values.mesaId)
     const padronMax = 300
     const sumaTotal =
@@ -150,9 +222,9 @@ export function MesasFeature() {
       votosMap
     )
 
-    toast.success(`Mesa ${mesaSeleccionada?.codigo || ''} guardada y bloqueada exitosamente`)
-    setOpenModal(false)
-    form.reset()
+    toast.success(`Acta de ${mesaSeleccionada?.codigo || ''} transmitida exitosamente`)
+    setOpenTranscribirModal(false)
+    cargarMesaForm.reset()
     setActaFileName(null)
   }
 
@@ -161,7 +233,7 @@ export function MesasFeature() {
       <Header>
         <div className='flex items-center gap-3 me-auto'>
           <Vote className='h-5 w-5 text-primary' />
-          <h1 className='text-base font-bold tracking-tight'>Gestión y Carga de Mesas</h1>
+          <h1 className='text-base font-bold tracking-tight'>Gestión y Mapa de Mesas por Facultad</h1>
         </div>
         <div className='flex items-center gap-3'>
           <LiveStatusBadge />
@@ -171,23 +243,43 @@ export function MesasFeature() {
       </Header>
 
       <Main className='space-y-6 p-4 sm:p-6'>
+        {/* Top Header Actions */}
         <div className='flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4'>
           <div>
-            <h2 className='text-2xl font-bold tracking-tight'>Mesas Electorales por Facultad</h2>
+            <h2 className='text-2xl font-bold tracking-tight'>Mesas Electorales USFX</h2>
             <p className='text-xs text-muted-foreground mt-0.5'>
-              Mapa visual de facultades USFX, distribución de mesas de votación y transcripción de actas.
+              Creación de facultades, registro de mesas y mapa visual de delegados asignados.
             </p>
           </div>
-          <Button onClick={() => setOpenModal(true)} className='font-semibold gap-2 shadow-sm text-xs'>
-            <PlusCircle className='h-4 w-4' /> Cargar Acta de Mesa
-          </Button>
+
+          <div className='flex flex-wrap items-center gap-2'>
+            <Button
+              onClick={() => setOpenCrearFacultadModal(true)}
+              variant='outline'
+              className='font-semibold gap-1.5 text-xs'
+            >
+              <Plus className='h-4 w-4 text-primary' /> Crear Nueva Facultad
+            </Button>
+
+            <Button
+              onClick={() => setOpenCrearMesaModal(true)}
+              variant='outline'
+              className='font-semibold gap-1.5 text-xs border-primary/30 text-primary hover:bg-primary/5'
+            >
+              <PlusCircle className='h-4 w-4' /> Registrar Nueva Mesa
+            </Button>
+
+            <Button onClick={() => setOpenTranscribirModal(true)} className='font-semibold gap-1.5 shadow-sm text-xs'>
+              <FileText className='h-4 w-4' /> Transcribir Votos / Acta
+            </Button>
+          </div>
         </div>
 
-        {/* MAPA VISUAL DE FACULTADES USFX */}
+        {/* MAPA VISUAL DE FACULTADES USFX (Sin cortes '...' y con tarjetas amplias) */}
         <div className='space-y-3'>
           <div className='flex items-center justify-between'>
             <p className='text-xs font-extrabold uppercase tracking-wider text-muted-foreground flex items-center gap-2'>
-              <Building2 className='h-4 w-4 text-primary' /> Mapa Electoral de Facultades USFX
+              <Building2 className='h-4 w-4 text-primary' /> Mapa Electoral por Facultades
             </p>
             {selectedFacultad && (
               <Button
@@ -196,13 +288,13 @@ export function MesasFeature() {
                 onClick={() => setSelectedFacultad(null)}
                 className='h-7 text-xs text-primary font-bold gap-1 hover:bg-primary/10'
               >
-                <FilterX className='h-3.5 w-3.5' /> Mostrar Todas las Facultades
+                <FilterX className='h-3.5 w-3.5' /> Ver Todas las Facultades
               </Button>
             )}
           </div>
 
-          <div className='grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3'>
-            {FACULTADES_MAP.map((fac) => {
+          <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'>
+            {todasLasFacultades.map((fac) => {
               const IconComponent = fac.icon
               const countMesas = ultimasMesas.filter((m) =>
                 m.facultad.toLowerCase().includes(fac.keyword.toLowerCase())
@@ -214,38 +306,76 @@ export function MesasFeature() {
               ).length
 
               const isSelected = selectedFacultad === fac.keyword
+              const pct = countMesas > 0 ? Math.round((countCargadas / countMesas) * 100) : 0
 
               return (
                 <Card
                   key={fac.id}
                   onClick={() => setSelectedFacultad(isSelected ? null : fac.keyword)}
-                  className={`cursor-pointer transition-all hover:scale-105 ${
+                  className={`cursor-pointer transition-all hover:shadow-lg relative overflow-hidden ${
                     isSelected
                       ? 'border-primary ring-2 ring-primary/40 bg-primary/5 shadow-md'
                       : 'border-border/60 hover:border-primary/40 bg-card'
                   }`}
                 >
-                  <CardContent className='p-3 text-center space-y-2'>
-                    <div className={`mx-auto h-9 w-9 rounded-xl flex items-center justify-center border ${fac.color}`}>
-                      <IconComponent className='h-5 w-5' />
+                  <CardContent className='p-4 space-y-3'>
+                    <div className='flex items-start justify-between gap-2'>
+                      <div className='flex items-center gap-3'>
+                        <div className={`h-10 w-10 rounded-xl flex items-center justify-center border shrink-0 ${fac.color}`}>
+                          <IconComponent className='h-5 w-5' />
+                        </div>
+                        <div className='space-y-0.5 min-w-0'>
+                          {/* Full name without truncation */}
+                          <h3 className='text-xs font-extrabold text-foreground leading-snug break-words'>
+                            {fac.nombre}
+                          </h3>
+                          <p className='text-[11px] text-muted-foreground font-medium'>
+                            {countMesas > 0 ? `${countMesas} mesas habilitadas` : 'Sin mesas regist.'}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <p className='text-xs font-bold text-foreground leading-tight truncate'>{fac.nombre}</p>
-                      <p className='text-[10px] text-muted-foreground font-semibold pt-0.5'>
-                        {countMesas > 0 ? `${countMesas} mesas` : 'Sin mesas'}
-                      </p>
+
+                    <div className='flex items-center justify-between pt-2 border-t border-border/40 text-xs'>
+                      <div className='flex items-center gap-1.5'>
+                        <span className='text-[11px] font-semibold text-muted-foreground'>Progreso:</span>
+                        <span className='text-[11px] font-mono font-bold text-foreground'>{countCargadas}/{countMesas}</span>
+                      </div>
+
+                      {countMesas > 0 ? (
+                        <Badge
+                          variant='outline'
+                          className={`text-[10px] font-black px-2 py-0.5 shadow-xs ${
+                            pct === 100
+                              ? 'bg-emerald-600 text-white border-emerald-600 animate-pulse'
+                              : pct > 0
+                                ? 'bg-amber-500 text-white border-amber-500'
+                                : 'bg-slate-500/10 text-slate-500 border-slate-500/30'
+                          }`}
+                        >
+                          {pct === 100 ? '100% COMPLETADO' : `${pct}% PROCESADO`}
+                        </Badge>
+                      ) : (
+                        <Badge variant='outline' className='text-[10px] text-muted-foreground'>
+                          0%
+                        </Badge>
+                      )}
                     </div>
+
+                    {/* Progress Bar Visual Line */}
                     {countMesas > 0 && (
-                      <Badge
-                        variant='outline'
-                        className={`text-[9px] font-bold px-1.5 py-0 ${
-                          countCargadas === countMesas
-                            ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
-                            : 'bg-amber-500/10 text-amber-600 border-amber-500/30'
-                        }`}
-                      >
-                        {countCargadas}/{countMesas} Cargadas
-                      </Badge>
+                      <div className='w-full bg-muted/60 h-1.5 rounded-full overflow-hidden'>
+                        <div
+                          className={`h-full transition-all duration-500 ${
+                            pct === 100
+                              ? 'bg-emerald-500'
+                              : pct > 0
+                                ? 'bg-amber-500'
+                                : 'bg-transparent'
+                          }`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
                     )}
                   </CardContent>
                 </Card>
@@ -254,7 +384,70 @@ export function MesasFeature() {
           </div>
         </div>
 
-        {/* TABLA DE MESAS FILTRADAS */}
+        {/* DETALLE VISUAL DE MESAS Y DELEGADOS SI HAY UNA FACULTAD SELECCIONADA */}
+        {selectedFacultad && (
+          <div className='p-4 rounded-xl border border-primary/30 bg-primary/5 space-y-4'>
+            <div className='flex items-center justify-between'>
+              <div>
+                <h3 className='text-base font-extrabold text-foreground flex items-center gap-2'>
+                  <Building2 className='h-5 w-5 text-primary' />
+                  Desglose de Mesas y Delegados en: <span className='text-primary underline'>{selectedFacultad}</span>
+                </h3>
+                <p className='text-xs text-muted-foreground pt-0.5'>
+                  {mesasDeFacultadSeleccionada.length} mesas asociadas a esta facultad con sus delegados de contacto directo.
+                </p>
+              </div>
+            </div>
+
+            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+              {mesasDeFacultadSeleccionada.map((m) => (
+                <div key={m.id} className='p-3.5 rounded-lg bg-card border border-border/60 space-y-3 shadow-xs'>
+                  <div className='flex items-center justify-between border-b pb-2'>
+                    <Badge variant='outline' className='font-mono font-bold text-xs bg-primary/10 text-primary border-primary/30'>
+                      {m.codigo}
+                    </Badge>
+                    <Badge variant='outline' className='text-[10px] font-bold'>
+                      {m.tipo}
+                    </Badge>
+                  </div>
+
+                  <div className='text-xs space-y-1'>
+                    <p className='text-muted-foreground'>Transcriptor: <strong className='text-foreground'>{m.transcriptor}</strong></p>
+                    <p className='text-muted-foreground'>Estado: <strong className='text-emerald-600 font-bold'>{m.estado}</strong></p>
+                  </div>
+
+                  {/* Delegado Card */}
+                  {m.delegadoNombre ? (
+                    <div className='p-2.5 rounded bg-muted/40 border flex items-center justify-between text-xs'>
+                      <div>
+                        <p className='text-[10px] font-bold uppercase text-muted-foreground'>Delegado de Mesa</p>
+                        <p className='font-bold text-foreground flex items-center gap-1'>
+                          <UserCheck className='h-3.5 w-3.5 text-primary' /> {m.delegadoNombre}
+                        </p>
+                        <p className='text-[11px] font-mono text-muted-foreground'>+591 {m.delegadoCelular}</p>
+                      </div>
+                      {m.delegadoCelular && (
+                        <a
+                          href={`https://wa.me/591${m.delegadoCelular}`}
+                          target='_blank'
+                          rel='noopener noreferrer'
+                          className='p-1.5 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors'
+                          title='Chat de WhatsApp'
+                        >
+                          <MessageSquare className='h-4 w-4' />
+                        </a>
+                      )}
+                    </div>
+                  ) : (
+                    <p className='text-[11px] italic text-muted-foreground pt-1'>Sin delegado asignado a esta mesa</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* TABLA COMPLETA DE MESAS */}
         <Card className='border-border/60 shadow-sm'>
           <CardHeader className='pb-4'>
             <div className='flex flex-col sm:flex-row items-center justify-between gap-3'>
@@ -351,8 +544,114 @@ export function MesasFeature() {
         </Card>
       </Main>
 
-      {/* Modal / Dialog Cargar Mesa */}
-      <Dialog open={openModal} onOpenChange={setOpenModal}>
+      {/* Modal 1: REGISTRAR NUEVA MESA */}
+      <Dialog open={openCrearMesaModal} onOpenChange={setOpenCrearMesaModal}>
+        <DialogContent className='sm:max-w-md'>
+          <DialogHeader>
+            <DialogTitle className='text-lg font-bold flex items-center gap-2'>
+              <PlusCircle className='h-5 w-5 text-primary' />
+              Registrar Nueva Mesa de Votación
+            </DialogTitle>
+            <DialogDescription className='text-xs'>
+              Cree una nueva mesa asignando código, facultad y sector (Estudiantil o Docente).
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={crearMesaForm.handleSubmit(onCrearMesaSubmit)} className='space-y-4 py-2'>
+            <div className='space-y-1.5'>
+              <Label className='text-xs font-semibold'>Código de Mesa *</Label>
+              <Input placeholder='Ej. MESA-04, MESA-DOC-02' {...crearMesaForm.register('codigo')} className='text-xs font-mono' />
+            </div>
+
+            <div className='space-y-1.5'>
+              <Label className='text-xs font-semibold'>Facultad Asignada *</Label>
+              <Select
+                value={crearMesaForm.watch('facultad')}
+                onValueChange={(val) => crearMesaForm.setValue('facultad', val)}
+              >
+                <SelectTrigger className='text-xs'>
+                  <SelectValue placeholder='Seleccione facultad...' />
+                </SelectTrigger>
+                <SelectContent>
+                  {todasLasFacultades.map((f) => (
+                    <SelectItem key={f.id} value={f.nombre} className='text-xs'>
+                      {f.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className='space-y-1.5'>
+              <Label className='text-xs font-semibold'>Tipo de Sector *</Label>
+              <Select
+                value={crearMesaForm.watch('tipo')}
+                onValueChange={(val) => crearMesaForm.setValue('tipo', val as any)}
+              >
+                <SelectTrigger className='text-xs'>
+                  <SelectValue placeholder='Seleccione tipo sector...' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='ESTUDIANTIL' className='text-xs'>
+                    Mesa Estudiantil (Ponderación 1)
+                  </SelectItem>
+                  <SelectItem value='DOCENTE' className='text-xs font-bold text-purple-600'>
+                    Mesa Docente (Ponderación 45)
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className='space-y-1.5'>
+              <Label className='text-xs font-semibold'>Transcriptor Encargado</Label>
+              <Input placeholder='Ej. Juan Carlos Pérez' {...crearMesaForm.register('transcriptor')} className='text-xs' />
+            </div>
+
+            <DialogFooter className='pt-2'>
+              <Button type='button' variant='outline' onClick={() => setOpenCrearMesaModal(false)} className='text-xs'>
+                Cancelar
+              </Button>
+              <Button type='submit' className='text-xs font-bold'>
+                Crear Mesa
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal 2: CREAR NUEVA FACULTAD */}
+      <Dialog open={openCrearFacultadModal} onOpenChange={setOpenCrearFacultadModal}>
+        <DialogContent className='sm:max-w-md'>
+          <DialogHeader>
+            <DialogTitle className='text-lg font-bold flex items-center gap-2'>
+              <Building2 className='h-5 w-5 text-primary' />
+              Registrar Nueva Facultad
+            </DialogTitle>
+            <DialogDescription className='text-xs'>
+              Agregue una nueva unidad académica al Mapa Electoral USFX.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={crearFacultadForm.handleSubmit(onCrearFacultadSubmit)} className='space-y-4 py-2'>
+            <div className='space-y-1.5'>
+              <Label className='text-xs font-semibold'>Nombre de la Facultad *</Label>
+              <Input placeholder='Ej. Facultad de Arquitectura y Urbanismo' {...crearFacultadForm.register('nombre')} className='text-xs' />
+            </div>
+
+            <DialogFooter className='pt-2'>
+              <Button type='button' variant='outline' onClick={() => setOpenCrearFacultadModal(false)} className='text-xs'>
+                Cancelar
+              </Button>
+              <Button type='submit' className='text-xs font-bold'>
+                Guardar Facultad
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal 3: TRANSCRIBIR ACTA / VOTOS */}
+      <Dialog open={openTranscribirModal} onOpenChange={setOpenTranscribirModal}>
         <DialogContent className='sm:max-w-md'>
           <DialogHeader>
             <DialogTitle className='text-lg font-bold flex items-center gap-2'>
@@ -364,10 +663,10 @@ export function MesasFeature() {
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4 py-2'>
+          <form onSubmit={cargarMesaForm.handleSubmit(onCargarMesaSubmit)} className='space-y-4 py-2'>
             <div className='space-y-1.5'>
               <Label className='text-xs font-semibold'>Seleccionar Mesa</Label>
-              <Select onValueChange={(val) => form.setValue('mesaId', val)}>
+              <Select onValueChange={(val) => cargarMesaForm.setValue('mesaId', val)}>
                 <SelectTrigger className='text-xs'>
                   <SelectValue placeholder='Seleccione la mesa a procesar...' />
                 </SelectTrigger>
@@ -392,7 +691,7 @@ export function MesasFeature() {
                   <Input
                     type='number'
                     min={0}
-                    {...form.register('votosYamile')}
+                    {...cargarMesaForm.register('votosYamile')}
                     className='text-xs font-bold text-primary'
                   />
                 </div>
@@ -402,7 +701,7 @@ export function MesasFeature() {
                   <Input
                     type='number'
                     min={0}
-                    {...form.register('votosMendoza')}
+                    {...cargarMesaForm.register('votosMendoza')}
                     className='text-xs font-bold'
                   />
                 </div>
@@ -412,7 +711,7 @@ export function MesasFeature() {
                   <Input
                     type='number'
                     min={0}
-                    {...form.register('votosSoliz')}
+                    {...cargarMesaForm.register('votosSoliz')}
                     className='text-xs font-bold'
                   />
                 </div>
@@ -422,7 +721,7 @@ export function MesasFeature() {
                   <Input
                     type='number'
                     min={0}
-                    {...form.register('votosBlanco')}
+                    {...cargarMesaForm.register('votosBlanco')}
                     className='text-xs font-bold'
                   />
                 </div>
@@ -461,11 +760,11 @@ export function MesasFeature() {
             </div>
 
             <DialogFooter className='pt-2'>
-              <Button type='button' variant='outline' onClick={() => setOpenModal(false)} className='text-xs'>
+              <Button type='button' variant='outline' onClick={() => setOpenTranscribirModal(false)} className='text-xs'>
                 Cancelar
               </Button>
               <Button type='submit' className='text-xs font-bold'>
-                Guardar y Bloquear Mesa
+                Transmitir Votos
               </Button>
             </DialogFooter>
           </form>

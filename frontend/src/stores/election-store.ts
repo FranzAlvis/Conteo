@@ -42,6 +42,12 @@ export interface TranscriptorAssignment {
   }[]
 }
 
+export interface FacultadCustom {
+  id: string
+  nombre: string
+  keyword: string
+}
+
 interface ElectionState {
   conteoAbierto: boolean
   ultimaActualizacion: string
@@ -54,7 +60,8 @@ interface ElectionState {
   candidatos: CandidatoVoto[]
   ultimasMesas: MesaReciente[]
   asignaciones: TranscriptorAssignment[]
-  
+  facultadesCustom: FacultadCustom[]
+
   // Actions
   setConteoAbierto: (abierto: boolean) => void
   setUltimaActualizacion: (hora: string) => void
@@ -65,6 +72,8 @@ interface ElectionState {
     actaFotoUrl?: string,
     observaciones?: string
   ) => void
+  crearMesa: (nuevaMesa: Partial<MesaReciente>) => void
+  crearFacultad: (nombre: string) => void
   actualizarAsignacionTranscriptor: (
     transcriptorId: string,
     mesasCodigos: string[]
@@ -80,6 +89,8 @@ export const useElectionStore = create<ElectionState>()((set) => ({
   totalVotosDocentes: 52,
   totalVotosPonderados: 245 + 52 * 45, // 2585
   totalPadron: 5500,
+
+  facultadesCustom: [],
 
   candidatos: [
     {
@@ -213,6 +224,42 @@ export const useElectionStore = create<ElectionState>()((set) => ({
   setConteoAbierto: (abierto) => set({ conteoAbierto: abierto }),
   setUltimaActualizacion: (hora) => set({ ultimaActualizacion: hora }),
   updateElectionData: (data) => set((state) => ({ ...state, ...data })),
+
+  crearMesa: (nuevaData) =>
+    set((state) => {
+      const nuevaMesa: MesaReciente = {
+        id: `m_${Date.now()}`,
+        codigo: nuevaData.codigo || `MESA-${state.ultimasMesas.length + 1}`,
+        facultad: nuevaData.facultad || 'Facultad General',
+        tipo: nuevaData.tipo || 'ESTUDIANTIL',
+        ponderacion: nuevaData.tipo === 'DOCENTE' ? 45 : 1,
+        transcriptor: nuevaData.transcriptor || 'Sin Asignar',
+        transcriptorId: nuevaData.transcriptorId,
+        hora: 'Pendiente',
+        estado: 'PENDIENTE',
+        votosRegistrados: 0,
+      }
+
+      return {
+        ...state,
+        totalMesas: state.totalMesas + 1,
+        ultimasMesas: [nuevaMesa, ...state.ultimasMesas],
+      }
+    }),
+
+  crearFacultad: (nombre) =>
+    set((state) => {
+      const id = `fac_${Date.now()}`
+      const nuevaFac: FacultadCustom = {
+        id,
+        nombre,
+        keyword: nombre,
+      }
+      return {
+        ...state,
+        facultadesCustom: [...state.facultadesCustom, nuevaFac],
+      }
+    }),
 
   guardarOEditarMesa: (mesaId, votosMap, actaFotoUrl, observaciones) =>
     set((state) => {
