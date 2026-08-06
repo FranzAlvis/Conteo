@@ -51,30 +51,58 @@
   @apply after:pointer-events-none after:absolute after:inset-s-0 after:bottom-0 after:hidden after:h-32 after:w-full after:rounded-b-2xl after:bg-[linear-gradient(180deg,transparent_10%,var(--background)_70%)] md:after:block;
 }
 
-/* Print Styles for Official USFX Reports */
+/* Perfect Print Styles for Official USFX Reports */
 @media print {
-  body * {
-    visibility: hidden !important;
+  header, nav, aside, main, footer, button, input, [data-radix-portal], .no-print {
+    display: none !important;
   }
-  #printable-area,
-  #printable-area * {
-    visibility: visible !important;
+
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    height: auto !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
+
   #printable-area {
+    display: block !important;
     position: absolute !important;
     left: 0 !important;
     top: 0 !important;
     width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
-    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
     border: none !important;
   }
+
+  #printable-area table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-top: 15px !important;
+  }
+
+  #printable-area th,
+  #printable-area td {
+    border: 1px solid #000000 !important;
+    padding: 6px 8px !important;
+    color: #000000 !important;
+    font-size: 11px !important;
+  }
+
+  #printable-area th {
+    background-color: #f0f0f0 !important;
+    font-weight: bold !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   @page {
     size: A4 portrait;
-    margin: 1.5cm;
+    margin: 1.2cm;
   }
 }
 
@@ -100,7 +128,7 @@
 
 @keyframes slideUp {
   from {
-    height: var(--radix-collapsible-content-height);
+    height: 0;
   }
   to {
     height: 0;

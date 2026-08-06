@@ -173,11 +173,8 @@ export function DelegadosFeature() {
     toast.success(`Delegado ${nombre} eliminado`)
   }
 
-  const handleTriggerPrint = () => {
+  const handleOpenPrintPreview = () => {
     setOpenReportModal(true)
-    setTimeout(() => {
-      window.print()
-    }, 300)
   }
 
   function onSubmit(values: DelegadoFormValues) {
@@ -238,11 +235,11 @@ export function DelegadosFeature() {
 
           <div className='flex items-center gap-2'>
             <Button
-              onClick={handleTriggerPrint}
+              onClick={handleOpenPrintPreview}
               variant='outline'
               className='font-semibold gap-2 text-xs border-primary/30 text-primary hover:bg-primary/5'
             >
-              <Printer className='h-4 w-4' /> Imprimir Reporte de Delegados
+              <Printer className='h-4 w-4' /> Vista Previa e Imprimir Nómina
             </Button>
 
             <Button onClick={handleOpenAdd} className='font-semibold gap-2 shadow-sm text-xs'>
@@ -428,10 +425,10 @@ export function DelegadosFeature() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal & Print View EXCLUSIVO para Delegados */}
+      {/* Modal Vista Previa en Pantalla */}
       <Dialog open={openReportModal} onOpenChange={setOpenReportModal}>
-        <DialogContent className='sm:max-w-3xl max-h-[90vh] overflow-y-auto'>
-          <DialogHeader>
+        <DialogContent className='sm:max-w-4xl max-h-[90vh] overflow-y-auto'>
+          <DialogHeader className='no-print'>
             <div className='flex items-center justify-between pe-4'>
               <DialogTitle className='text-lg font-bold flex items-center gap-2'>
                 <FileText className='h-5 w-5 text-primary' />
@@ -442,88 +439,113 @@ export function DelegadosFeature() {
               </Button>
             </div>
             <DialogDescription className='text-xs'>
-              Formato institucional A4 con cuadrícula optimizada para el Comité Electoral de la USFX.
+              Formato de nómina oficial de delegados acreditados por mesa (USFX 2026).
             </DialogDescription>
           </DialogHeader>
 
-          {/* PRINTABLE AREA CONTAINER */}
-          <div id='printable-area' className='p-6 bg-white text-black font-sans space-y-6 text-xs border border-gray-300 rounded-lg shadow-sm'>
-            {/* Header Institucional USFX */}
-            <div className='border-b-2 border-black pb-4 text-center space-y-1'>
-              <h2 className='text-sm font-black uppercase tracking-wider text-black'>
+          {/* On-screen visual preview inside Modal */}
+          <div className='p-6 bg-card border rounded-lg space-y-4 text-xs shadow-xs'>
+            <div className='border-b pb-3 text-center space-y-1'>
+              <h2 className='text-sm font-black uppercase text-foreground'>
                 UNIVERSIDAD MAYOR, REAL Y PONTIFICIA DE SAN FRANCISCO XAVIER DE CHUQUISACA
               </h2>
-              <h3 className='text-base font-extrabold uppercase text-red-900 pt-0.5'>
+              <h3 className='text-sm font-extrabold uppercase text-primary pt-0.5'>
                 ELECCIONES AUTORIDADES UNIVERSITARIAS 2026 — VICERRECTORADO
               </h3>
-              <p className='text-xs font-bold uppercase text-black pt-1 bg-gray-100 inline-block px-4 py-1 border border-gray-400 rounded-sm'>
+              <p className='text-xs font-bold uppercase text-foreground pt-1 inline-block px-3 py-0.5 bg-muted rounded-sm'>
                 NÓMINA OFICIAL DE DELEGADOS DE MESA ACREDITADOS
               </p>
-              <div className='flex justify-between items-center text-[10px] text-gray-700 pt-3 font-mono'>
-                <span><strong>Lugar:</strong> Sucre, Chuquisaca - Bolivia</span>
-                <span><strong>Fecha de Emisión:</strong> {new Date().toLocaleDateString('es-BO')} {new Date().toLocaleTimeString()}</span>
-              </div>
             </div>
 
-            {/* Tabla Estructurada para Impresión */}
-            <div className='overflow-hidden border border-black rounded-xs'>
-              <table className='w-full text-left border-collapse'>
+            <div className='rounded-md border overflow-x-auto'>
+              <table className='w-full text-left text-xs border-collapse'>
                 <thead>
-                  <tr className='bg-gray-200 text-black font-bold uppercase text-[10px] border-b border-black'>
-                    <th className='p-2 border-r border-black text-center w-8'>N°</th>
-                    <th className='p-2 border-r border-black'>Nombre del Delegado</th>
-                    <th className='p-2 border-r border-black w-24'>Carnet (CI)</th>
-                    <th className='p-2 border-r border-black w-24'>Celular</th>
-                    <th className='p-2 border-r border-black text-center w-24'>Mesa</th>
-                    <th className='p-2 border-r border-black'>Transcriptor Encargado</th>
+                  <tr className='bg-muted/60 font-bold uppercase text-[10px] border-b'>
+                    <th className='p-2 border-r text-center w-8'>N°</th>
+                    <th className='p-2 border-r'>Nombre Completo</th>
+                    <th className='p-2 border-r w-28'>CI</th>
+                    <th className='p-2 border-r w-28'>Celular</th>
+                    <th className='p-2 border-r text-center w-24'>Mesa</th>
+                    <th className='p-2 border-r'>Transcriptor Encargado</th>
                     <th className='p-2 text-center w-20'>Estado</th>
                   </tr>
                 </thead>
-                <tbody className='divide-y divide-gray-400'>
+                <tbody className='divide-y'>
                   {delegadosList.map((d, index) => (
-                    <tr key={d.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                      <td className='p-2 border-r border-black text-center font-bold text-[11px]'>{index + 1}</td>
-                      <td className='p-2 border-r border-black font-bold text-xs text-black'>{d.nombre}</td>
-                      <td className='p-2 border-r border-black font-mono text-[11px] text-gray-900'>{d.ci}</td>
-                      <td className='p-2 border-r border-black font-mono text-[11px] text-gray-900'>+591 {d.celular}</td>
-                      <td className='p-2 border-r border-black text-center font-bold text-xs'>{d.mesaCodigo}</td>
-                      <td className='p-2 border-r border-black font-medium text-[11px] text-gray-800'>
-                        {d.transcriptorNombre || 'Sin asignar'}
-                      </td>
+                    <tr key={d.id} className='hover:bg-muted/20'>
+                      <td className='p-2 border-r text-center font-bold text-[11px]'>{index + 1}</td>
+                      <td className='p-2 border-r font-bold text-xs'>{d.nombre}</td>
+                      <td className='p-2 border-r font-mono text-[11px]'>{d.ci}</td>
+                      <td className='p-2 border-r font-mono text-[11px]'>+591 {d.celular}</td>
+                      <td className='p-2 border-r text-center font-bold text-xs'>{d.mesaCodigo}</td>
+                      <td className='p-2 border-r text-[11px]'>{d.transcriptorNombre || 'Sin asignar'}</td>
                       <td className='p-2 text-center font-bold text-[10px]'>
-                        {d.isActive ? (
-                          <span className='text-emerald-800 uppercase font-black'>ACTIVO</span>
-                        ) : (
-                          <span className='text-red-700 uppercase font-bold'>INACTIVO</span>
-                        )}
+                        {d.isActive ? 'ACTIVO' : 'INACTIVO'}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-
-            {/* Firmas Institucionales */}
-            <div className='pt-12 grid grid-cols-2 gap-12 text-center text-xs font-semibold'>
-              <div className='border-t border-black pt-2'>
-                <p className='font-bold uppercase text-black'>FIRMA DELEGADO GENERAL</p>
-                <p className='text-[10px] text-gray-600'>Representación Autorizada</p>
-              </div>
-
-              <div className='border-t border-black pt-2'>
-                <p className='font-bold uppercase text-black'>COMITÉ ELECTORAL USFX</p>
-                <p className='text-[10px] text-gray-600'>Sello y Acreditación Oficial</p>
-              </div>
-            </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className='no-print'>
             <Button onClick={() => setOpenReportModal(false)} className='text-xs font-bold'>
               Cerrar Vista Previa
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* PRINTABLE AREA CONTAINER (Rendered at root level for flawless printing) */}
+      <div id='printable-area' className='hidden print:block p-6 bg-white text-black font-sans space-y-4 text-xs'>
+        <div className='border-b-2 border-black pb-3 text-center space-y-1'>
+          <h2 className='text-sm font-black uppercase tracking-wider text-black'>
+            UNIVERSIDAD MAYOR, REAL Y PONTIFICIA DE SAN FRANCISCO XAVIER DE CHUQUISACA
+          </h2>
+          <h3 className='text-sm font-extrabold uppercase text-black pt-0.5'>
+            ELECCIONES AUTORIDADES UNIVERSITARIAS 2026 — VICERRECTORADO
+          </h3>
+          <p className='text-xs font-bold uppercase text-black pt-1 bg-gray-100 inline-block px-4 py-0.5 border border-gray-400 rounded-sm'>
+            NÓMINA OFICIAL DE DELEGADOS DE MESA ACREDITADOS
+          </p>
+          <div className='flex justify-between items-center text-[10px] text-gray-700 pt-2 font-mono'>
+            <span><strong>Lugar:</strong> Sucre, Chuquisaca - Bolivia</span>
+            <span><strong>Fecha de Emisión:</strong> {new Date().toLocaleDateString('es-BO')} {new Date().toLocaleTimeString()}</span>
+          </div>
+        </div>
+
+        <table className='w-full text-left border-collapse border border-black text-xs'>
+          <thead>
+            <tr className='bg-gray-200 text-black font-bold uppercase text-[10px] border-b border-black'>
+              <th className='p-2 border border-black text-center w-8'>N°</th>
+              <th className='p-2 border border-black'>Nombre Completo del Delegado</th>
+              <th className='p-2 border border-black w-28'>Carnet (CI)</th>
+              <th className='p-2 border border-black w-28'>Teléfono Celular</th>
+              <th className='p-2 border border-black text-center w-24'>Mesa</th>
+              <th className='p-2 border border-black'>Transcriptor Responsable</th>
+              <th className='p-2 border border-black text-center w-20'>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {delegadosList.map((d, index) => (
+              <tr key={d.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                <td className='p-2 border border-black text-center font-bold text-[11px]'>{index + 1}</td>
+                <td className='p-2 border border-black font-bold text-xs text-black'>{d.nombre}</td>
+                <td className='p-2 border border-black font-mono text-[11px] text-black'>{d.ci}</td>
+                <td className='p-2 border border-black font-mono text-[11px] text-black'>+591 {d.celular}</td>
+                <td className='p-2 border border-black text-center font-bold text-xs text-black'>{d.mesaCodigo}</td>
+                <td className='p-2 border border-black font-medium text-[11px] text-black'>
+                  {d.transcriptorNombre || 'Sin asignar'}
+                </td>
+                <td className='p-2 border border-black text-center font-bold text-[10px] text-black'>
+                  {d.isActive ? 'ACTIVO' : 'INACTIVO'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </>
   )
 }
