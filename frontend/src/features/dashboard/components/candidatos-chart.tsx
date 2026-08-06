@@ -16,7 +16,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { BarChart3, PieChart as PieChartIcon } from 'lucide-react'
 
-// Color palette for Pie chart sectors (Leader uses institutional primary wine red)
 const PIE_COLORS = [
   'hsl(350, 65%, 38%)', // Primary Wine Red (Leader)
   '#3b82f6', // Slate Blue
@@ -26,21 +25,40 @@ const PIE_COLORS = [
   '#64748b', // Muted Slate
 ]
 
-export function CandidatosChart() {
-  const { candidatos, totalVotos } = useElectionStore()
+interface CandidatosChartProps {
+  activeSector?: 'ponderado' | 'estudiantil' | 'docente'
+}
+
+export function CandidatosChart({ activeSector = 'ponderado' }: CandidatosChartProps) {
+  const { candidatos, totalVotosPonderados, totalVotosEstudiantiles, totalVotosDocentes } = useElectionStore()
   const [chartType, setChartType] = useState<'bar' | 'pie'>('bar')
 
+  const totalSectorVotos =
+    activeSector === 'ponderado'
+      ? totalVotosPonderados
+      : activeSector === 'estudiantil'
+        ? totalVotosEstudiantiles
+        : totalVotosDocentes
+
+  // Get vote count for each candidate based on sector
+  const getVotesForSector = (c: (typeof candidatos)[0]) => {
+    if (activeSector === 'ponderado') return c.votosPonderados
+    if (activeSector === 'estudiantil') return c.votosEstudiantiles
+    return c.votosDocentes
+  }
+
   // Determine highest vote count for dynamic --primary highlight
-  const maxVotos = Math.max(...candidatos.map((c) => c.votos), 1)
+  const maxVotos = Math.max(...candidatos.map((c) => getVotesForSector(c)), 1)
 
   const data = candidatos.map((c, index) => {
-    const porcentaje = totalVotos > 0 ? ((c.votos / totalVotos) * 100).toFixed(1) : '0'
-    const isLeader = c.votos === maxVotos && c.votos > 0
+    const votosVal = getVotesForSector(c)
+    const porcentaje = totalSectorVotos > 0 ? ((votosVal / totalSectorVotos) * 100).toFixed(1) : '0'
+    const isLeader = votosVal === maxVotos && votosVal > 0
     return {
       id: c.id,
       nombre: c.nombre,
       lista: c.lista,
-      votos: c.votos,
+      votos: votosVal,
       porcentaje: Number(porcentaje),
       isLeader,
       esPropio: c.esPropio,
@@ -82,7 +100,7 @@ export function CandidatosChart() {
       {/* Chart View Toggle Switch */}
       <div className='flex items-center justify-between pb-2 border-b border-border/40'>
         <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>
-          Vista Gráfica de Conteo
+          Vista Gráfica ({activeSector.toUpperCase()})
         </span>
         <div className='inline-flex items-center rounded-lg border bg-muted/30 p-1 text-muted-foreground gap-1'>
           <Button
@@ -136,12 +154,15 @@ export function CandidatosChart() {
                         <p className='font-bold text-sm'>{d.nombre}</p>
                         <p className='text-muted-foreground'>{d.lista}</p>
                         <div className='pt-1 flex items-center justify-between gap-4 font-semibold'>
-                          <span>Votos: <strong className='text-primary text-sm'>{d.votos.toLocaleString()}</strong></span>
+                          <span>
+                            {activeSector === 'ponderado' ? 'Puntos:' : 'Votos:'}{' '}
+                            <strong className='text-primary text-sm'>{d.votos.toLocaleString()}</strong>
+                          </span>
                           <span>({d.porcentaje}%)</span>
                         </div>
                         {d.isLeader && (
                           <p className='text-[10px] uppercase tracking-wider font-bold text-primary pt-1'>
-                            Líder de la Contienda
+                            Líder del Sector
                           </p>
                         )}
                       </div>
@@ -195,7 +216,10 @@ export function CandidatosChart() {
                         <p className='font-bold text-sm'>{d.nombre}</p>
                         <p className='text-muted-foreground'>{d.lista}</p>
                         <div className='pt-1 flex items-center justify-between gap-4 font-semibold'>
-                          <span>Total Votos: <strong className='text-primary text-sm'>{d.votos.toLocaleString()}</strong></span>
+                          <span>
+                            {activeSector === 'ponderado' ? 'Puntos Ponderados:' : 'Votos:'}{' '}
+                            <strong className='text-primary text-sm'>{d.votos.toLocaleString()}</strong>
+                          </span>
                           <span className='font-bold text-primary'>({d.porcentaje}%)</span>
                         </div>
                       </div>
@@ -207,7 +231,7 @@ export function CandidatosChart() {
               <Legend
                 verticalAlign='bottom'
                 height={36}
-                formatter={(value: string, entry: any) => {
+                formatter={(value: string) => {
                   const item = data.find((d) => d.nombre === value)
                   return (
                     <span className='text-xs font-semibold text-foreground mr-3'>
@@ -250,7 +274,7 @@ export function CandidatosChart() {
               <div className={c.isLeader ? 'text-primary text-base font-extrabold' : 'text-foreground text-sm'}>
                 {c.votos.toLocaleString()}
               </div>
-              <div className='text-[10px] text-muted-foreground'>{c.porcentaje}% del total</div>
+              <div className='text-[10px] text-muted-foreground'>{c.porcentaje}% del sector</div>
             </div>
           </div>
         ))}

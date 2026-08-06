@@ -78,20 +78,9 @@ export function SignIn() {
           </div>
         </div>
 
-        {/* Bottom Footer with Developer Credit */}
+        {/* Bottom Footer */}
         <div className='relative z-10 text-xs text-white/85 flex justify-between items-center border-t border-white/15 pt-4 font-medium'>
-          <span>
-            Desarrollado por{' '}
-            <a
-              href='https://github.com/FranzAlvis'
-              target='_blank'
-              rel='noopener noreferrer'
-              className='font-bold text-white underline underline-offset-2 hover:text-amber-300 transition-colors'
-            >
-              Fr4nZ
-            </a>{' '}
-            — USFX Sucre, Bolivia
-          </span>
+          <span>© 2026 USFX — Sucre, Bolivia</span>
           <span>Acceso Restringido</span>
         </div>
       </div>
@@ -134,16 +123,7 @@ export function SignIn() {
 
         {/* Footer info for mobile */}
         <p className='mt-8 text-center text-xs text-muted-foreground max-w-xs font-medium'>
-          Desarrollado por{' '}
-          <a
-            href='https://github.com/FranzAlvis'
-            target='_blank'
-            rel='noopener noreferrer'
-            className='font-bold text-primary underline underline-offset-2 hover:opacity-80'
-          >
-            Fr4nZ
-          </a>{' '}
-          — USFX Sucre, Bolivia
+          USFX Sucre — Sistema seguro con auditoría y trazabilidad en tiempo real.
         </p>
       </div>
     </div>

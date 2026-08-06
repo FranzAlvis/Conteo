@@ -4,7 +4,9 @@ import {
   UserCheck,
   Users,
   Settings,
-  Radio
+  Radio,
+  FileSpreadsheet,
+  Share2,
 } from 'lucide-react'
 import { type SidebarData } from '../types'
 
@@ -36,6 +38,11 @@ export const sidebarData: SidebarData = {
           icon: Radio,
         },
         {
+          title: 'Transcripción de Actas',
+          url: '/transcripcion',
+          icon: FileSpreadsheet,
+        },
+        {
           title: 'Mesas de Votación',
           url: '/mesas',
           icon: Vote,
@@ -50,6 +57,11 @@ export const sidebarData: SidebarData = {
     {
       title: 'Administración',
       items: [
+        {
+          title: 'Asignaciones & WhatsApp',
+          url: '/asignaciones',
+          icon: Share2,
+        },
         {
           title: 'Gestión de Usuarios',
           url: '/users',

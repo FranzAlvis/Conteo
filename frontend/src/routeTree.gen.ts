@@ -13,10 +13,12 @@ import { Route as ClerkRouteRouteImport } from './routes/clerk/route'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
+import { Route as AuthenticatedTranscripcionRouteImport } from './routes/_authenticated/transcripcion'
 import { Route as AuthenticatedResultadosRouteImport } from './routes/_authenticated/resultados'
 import { Route as AuthenticatedMesasRouteImport } from './routes/_authenticated/mesas'
 import { Route as AuthenticatedDelegadosRouteImport } from './routes/_authenticated/delegados'
 import { Route as AuthenticatedConfiguracionRouteImport } from './routes/_authenticated/configuracion'
+import { Route as AuthenticatedAsignacionesRouteImport } from './routes/_authenticated/asignaciones'
 import { Route as errors503RouteImport } from './routes/(errors)/503'
 import { Route as errors500RouteImport } from './routes/(errors)/500'
 import { Route as errors404RouteImport } from './routes/(errors)/404'
@@ -64,6 +66,12 @@ const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedTranscripcionRoute =
+  AuthenticatedTranscripcionRouteImport.update({
+    id: '/transcripcion',
+    path: '/transcripcion',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedResultadosRoute = AuthenticatedResultadosRouteImport.update({
   id: '/resultados',
   path: '/resultados',
@@ -83,6 +91,12 @@ const AuthenticatedConfiguracionRoute =
   AuthenticatedConfiguracionRouteImport.update({
     id: '/configuracion',
     path: '/configuracion',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAsignacionesRoute =
+  AuthenticatedAsignacionesRouteImport.update({
+    id: '/asignaciones',
+    path: '/asignaciones',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const errors503Route = errors503RouteImport.update({
@@ -242,10 +256,12 @@ export interface FileRoutesByFullPath {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
+  '/asignaciones': typeof AuthenticatedAsignacionesRoute
   '/configuracion': typeof AuthenticatedConfiguracionRoute
   '/delegados': typeof AuthenticatedDelegadosRoute
   '/mesas': typeof AuthenticatedMesasRoute
   '/resultados': typeof AuthenticatedResultadosRoute
+  '/transcripcion': typeof AuthenticatedTranscripcionRoute
   '/users': typeof AuthenticatedUsersRouteWithChildren
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
@@ -274,10 +290,12 @@ export interface FileRoutesByTo {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
+  '/asignaciones': typeof AuthenticatedAsignacionesRoute
   '/configuracion': typeof AuthenticatedConfiguracionRoute
   '/delegados': typeof AuthenticatedDelegadosRoute
   '/mesas': typeof AuthenticatedMesasRoute
   '/resultados': typeof AuthenticatedResultadosRoute
+  '/transcripcion': typeof AuthenticatedTranscripcionRoute
   '/': typeof AuthenticatedIndexRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
@@ -311,10 +329,12 @@ export interface FileRoutesById {
   '/(errors)/404': typeof errors404Route
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
+  '/_authenticated/asignaciones': typeof AuthenticatedAsignacionesRoute
   '/_authenticated/configuracion': typeof AuthenticatedConfiguracionRoute
   '/_authenticated/delegados': typeof AuthenticatedDelegadosRoute
   '/_authenticated/mesas': typeof AuthenticatedMesasRoute
   '/_authenticated/resultados': typeof AuthenticatedResultadosRoute
+  '/_authenticated/transcripcion': typeof AuthenticatedTranscripcionRoute
   '/_authenticated/users': typeof AuthenticatedUsersRouteWithChildren
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
@@ -348,10 +368,12 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/asignaciones'
     | '/configuracion'
     | '/delegados'
     | '/mesas'
     | '/resultados'
+    | '/transcripcion'
     | '/users'
     | '/errors/$error'
     | '/settings/account'
@@ -380,10 +402,12 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/asignaciones'
     | '/configuracion'
     | '/delegados'
     | '/mesas'
     | '/resultados'
+    | '/transcripcion'
     | '/'
     | '/errors/$error'
     | '/settings/account'
@@ -416,10 +440,12 @@ export interface FileRouteTypes {
     | '/(errors)/404'
     | '/(errors)/500'
     | '/(errors)/503'
+    | '/_authenticated/asignaciones'
     | '/_authenticated/configuracion'
     | '/_authenticated/delegados'
     | '/_authenticated/mesas'
     | '/_authenticated/resultados'
+    | '/_authenticated/transcripcion'
     | '/_authenticated/users'
     | '/_authenticated/'
     | '/_authenticated/errors/$error'
@@ -483,6 +509,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedUsersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/transcripcion': {
+      id: '/_authenticated/transcripcion'
+      path: '/transcripcion'
+      fullPath: '/transcripcion'
+      preLoaderRoute: typeof AuthenticatedTranscripcionRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/resultados': {
       id: '/_authenticated/resultados'
       path: '/resultados'
@@ -509,6 +542,13 @@ declare module '@tanstack/react-router' {
       path: '/configuracion'
       fullPath: '/configuracion'
       preLoaderRoute: typeof AuthenticatedConfiguracionRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/asignaciones': {
+      id: '/_authenticated/asignaciones'
+      path: '/asignaciones'
+      fullPath: '/asignaciones'
+      preLoaderRoute: typeof AuthenticatedAsignacionesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/(errors)/503': {
@@ -739,10 +779,12 @@ const AuthenticatedUsersRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
+  AuthenticatedAsignacionesRoute: typeof AuthenticatedAsignacionesRoute
   AuthenticatedConfiguracionRoute: typeof AuthenticatedConfiguracionRoute
   AuthenticatedDelegadosRoute: typeof AuthenticatedDelegadosRoute
   AuthenticatedMesasRoute: typeof AuthenticatedMesasRoute
   AuthenticatedResultadosRoute: typeof AuthenticatedResultadosRoute
+  AuthenticatedTranscripcionRoute: typeof AuthenticatedTranscripcionRoute
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
@@ -754,10 +796,12 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
+  AuthenticatedAsignacionesRoute: AuthenticatedAsignacionesRoute,
   AuthenticatedConfiguracionRoute: AuthenticatedConfiguracionRoute,
   AuthenticatedDelegadosRoute: AuthenticatedDelegadosRoute,
   AuthenticatedMesasRoute: AuthenticatedMesasRoute,
   AuthenticatedResultadosRoute: AuthenticatedResultadosRoute,
+  AuthenticatedTranscripcionRoute: AuthenticatedTranscripcionRoute,
   AuthenticatedUsersRoute: AuthenticatedUsersRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,

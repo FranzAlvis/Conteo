@@ -7,6 +7,7 @@ async function main() {
   console.log('🌱 Iniciando parametrización de base de datos (Seed)...')
 
   // 1. Limpiar base de datos
+  await prisma.delegado.deleteMany()
   await prisma.actaMesa.deleteMany()
   await prisma.votoMesa.deleteMany()
   await prisma.mesa.deleteMany()
@@ -25,16 +26,29 @@ async function main() {
       username: 'admin',
       passwordHash: passwordHashAdmin,
       role: 'ADMIN',
+      telefono: '71234567',
       isActive: true,
     },
   })
 
-  const transcriptor = await prisma.user.create({
+  const transcriptor1 = await prisma.user.create({
     data: {
-      name: 'Carlos Transcriptor',
+      name: 'Juan Carlos Pérez (Transcriptor 1)',
       username: 'transcriptor',
       passwordHash: passwordHashTrans,
       role: 'TRANSCRIPTOR',
+      telefono: '76543210',
+      isActive: true,
+    },
+  })
+
+  const transcriptor2 = await prisma.user.create({
+    data: {
+      name: 'María Elena Torrez (Transcriptor 2)',
+      username: 'transcriptor2',
+      passwordHash: passwordHashTrans,
+      role: 'TRANSCRIPTOR',
+      telefono: '68098765',
       isActive: true,
     },
   })
@@ -45,17 +59,18 @@ async function main() {
       username: 'visor',
       passwordHash: passwordHashVisor,
       role: 'VISOR',
+      telefono: '70011223',
       isActive: true,
     },
   })
 
-  console.log('✅ Usuarios creados (admin, transcriptor, visor)')
+  console.log('✅ Usuarios creados (admin, transcriptores, visor)')
 
   // 3. Crear Cargo
   const cargoVicerrector = await prisma.cargo.create({
     data: {
       nombre: 'Vicerrectorado 2026',
-      descripcion: 'Elecciones de autoridades universitarias 2026-2030',
+      descripcion: 'Elecciones de autoridades universitarias 2026-2030 (USFX Sucre)',
     },
   })
 
@@ -98,15 +113,17 @@ async function main() {
 
   console.log('✅ Candidatos parametrizados correctamente')
 
-  // 5. Crear Mesas de votación
+  // 5. Crear Mesas de votación (Estudiantiles ponderación 1, Docente ponderación 45)
   const mesa1 = await prisma.mesa.create({
     data: {
       codigo: 'MESA-01',
       facultad: 'Facultad de Medicina',
       ubicacion: 'Aula Magna - Planta Baja',
       totalPadron: 250,
+      tipo: 'ESTUDIANTIL',
+      ponderacion: 1,
       estado: 'CARGADA',
-      transcriptorId: transcriptor.id,
+      transcriptorId: transcriptor1.id,
     },
   })
 
@@ -116,8 +133,10 @@ async function main() {
       facultad: 'Facultad de Derecho',
       ubicacion: 'Bloque A - Aula 102',
       totalPadron: 280,
+      tipo: 'ESTUDIANTIL',
+      ponderacion: 1,
       estado: 'EN_CARGA',
-      transcriptorId: transcriptor.id,
+      transcriptorId: transcriptor1.id,
     },
   })
 
@@ -127,11 +146,66 @@ async function main() {
       facultad: 'Facultad de Tecnología',
       ubicacion: 'Laboratorio de Informática',
       totalPadron: 300,
+      tipo: 'ESTUDIANTIL',
+      ponderacion: 1,
       estado: 'PENDIENTE',
+      transcriptorId: transcriptor2.id,
     },
   })
 
-  // 6. Registrar Votos Iniciales para Mesa-01
+  // MESA EXCLUSIVA DOCENTE (1 voto docente = 45 votos estudiantes)
+  const mesaDocente = await prisma.mesa.create({
+    data: {
+      codigo: 'MESA-DOC-01',
+      facultad: 'Mesa Docentes USFX (Exclusiva)',
+      ubicacion: 'Salón de Honor - Campus Central',
+      totalPadron: 120,
+      tipo: 'DOCENTE',
+      ponderacion: 45,
+      estado: 'CARGADA',
+      transcriptorId: transcriptor2.id,
+    },
+  })
+
+  // 6. Crear Delegados asignados por mesa y transcriptor
+  await prisma.delegado.create({
+    data: {
+      nombre: 'Ana María Roca',
+      ci: '8492019 CH',
+      celular: '71234567',
+      correo: 'ana.roca@usfx.edu.bo',
+      mesaId: mesa1.id,
+      transcriptorId: transcriptor1.id,
+      isActive: true,
+    },
+  })
+
+  await prisma.delegado.create({
+    data: {
+      nombre: 'Jorge Luis Gutiérrez',
+      ci: '9210384 CH',
+      celular: '68019283',
+      correo: 'jorge.gutierrez@gmail.com',
+      mesaId: mesa2.id,
+      transcriptorId: transcriptor1.id,
+      isActive: true,
+    },
+  })
+
+  await prisma.delegado.create({
+    data: {
+      nombre: 'Dr. Fernando Arancibia',
+      ci: '3410928 CH',
+      celular: '77889900',
+      correo: 'f.arancibia@usfx.edu.bo',
+      mesaId: mesaDocente.id,
+      transcriptorId: transcriptor2.id,
+      isActive: true,
+    },
+  })
+
+  // 7. Registrar Votos Iniciales
+  // Mesa 1 Estudiantil (145 Yamile, 80 Mendoza, 15 Soliz, 5 Blancos)
   await prisma.votoMesa.createMany({
     data: [
       { mesaId: mesa1.id, candidatoId: yamile.id, cantidad: 145 },
@@ -141,7 +215,17 @@ async function main() {
     ],
   })
 
-  console.log('✅ Mesas y Votos iniciales registrados correctamente')
+  // Mesa Docente (30 Yamile, 15 Mendoza, 5 Soliz, 2 Blancos) -> 1 Voto = 45 Puntos
+  await prisma.votoMesa.createMany({
+    data: [
+      { mesaId: mesaDocente.id, candidatoId: yamile.id, cantidad: 30 },
+      { mesaId: mesaDocente.id, candidatoId: mendoza.id, cantidad: 15 },
+      { mesaId: mesaDocente.id, candidatoId: soliz.id, cantidad: 5 },
+      { mesaId: mesaDocente.id, candidatoId: blancos.id, cantidad: 2 },
+    ],
+  })
+
+  console.log('✅ Mesas (Estudiantiles y Docentes ponderadas) y Votos iniciales registrados')
   console.log('🎉 Seed completado exitosamente.')
 }
 

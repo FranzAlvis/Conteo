@@ -20,6 +20,11 @@ enum EstadoMesa {
   CARGADA
 }
 
+enum TipoMesa {
+  ESTUDIANTIL
+  DOCENTE
+}
+
 model User {
   id           String     @id @default(uuid())
   name         String
@@ -28,10 +33,12 @@ model User {
   role         Role       @default(VISOR)
   isActive     Boolean    @default(true)
   avatar       String?
+  telefono     String?
   createdAt    DateTime   @default(now())
 
-  mesasEnEdicion Mesa[]
-  actasSubidas   ActaMesa[]
+  mesasAsignadas    Mesa[]     @relation("TranscriptorMesas")
+  delegadosAsignados Delegado[] @relation("TranscriptorDelegados")
+  actasSubidas      ActaMesa[]
 }
 
 model Cargo {
@@ -61,13 +68,30 @@ model Mesa {
   facultad       String
   ubicacion      String
   totalPadron    Int
+  tipo           TipoMesa    @default(ESTUDIANTIL)
+  ponderacion    Int         @default(1)
   estado         EstadoMesa  @default(PENDIENTE)
   transcriptorId String?
-  transcriptor   User?       @relation(fields: [transcriptorId], references: [id])
+  transcriptor   User?       @relation("TranscriptorMesas", fields: [transcriptorId], references: [id])
   updatedAt      DateTime    @updatedAt
 
   votos          VotoMesa[]
   actas          ActaMesa[]
+  delegados      Delegado[]
+}
+
+model Delegado {
+  id             String   @id @default(uuid())
+  nombre         String
+  ci             String
+  celular        String
+  correo         String?
+  mesaId         String?
+  mesa           Mesa?    @relation(fields: [mesaId], references: [id])
+  transcriptorId String?
+  transcriptor   User?    @relation("TranscriptorDelegados", fields: [transcriptorId], references: [id])
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
 }
 
 model VotoMesa {
