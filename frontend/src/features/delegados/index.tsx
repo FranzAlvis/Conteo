@@ -40,7 +40,6 @@ import {
   Edit,
   Trash2,
   Phone,
-  Mail,
   CreditCard,
   Vote,
   Printer,
@@ -174,6 +173,13 @@ export function DelegadosFeature() {
     toast.success(`Delegado ${nombre} eliminado`)
   }
 
+  const handleTriggerPrint = () => {
+    setOpenReportModal(true)
+    setTimeout(() => {
+      window.print()
+    }, 300)
+  }
+
   function onSubmit(values: DelegadoFormValues) {
     if (editingDelegado) {
       setDelegadosList((prev) =>
@@ -226,17 +232,17 @@ export function DelegadosFeature() {
           <div>
             <h2 className='text-2xl font-bold tracking-tight'>Delegados Electorales</h2>
             <p className='text-xs text-muted-foreground mt-0.5'>
-              Representantes de mesa, celulares para coordinación por WhatsApp y transcriptor asignado.
+              Representantes de mesa acreditados, celulares de coordinación y transcriptor asignado.
             </p>
           </div>
 
           <div className='flex items-center gap-2'>
             <Button
-              onClick={() => setOpenReportModal(true)}
+              onClick={handleTriggerPrint}
               variant='outline'
-              className='font-semibold gap-2 text-xs'
+              className='font-semibold gap-2 text-xs border-primary/30 text-primary hover:bg-primary/5'
             >
-              <Printer className='h-4 w-4 text-primary' /> Imprimir Nomina
+              <Printer className='h-4 w-4' /> Imprimir Reporte de Delegados
             </Button>
 
             <Button onClick={handleOpenAdd} className='font-semibold gap-2 shadow-sm text-xs'>
@@ -422,52 +428,98 @@ export function DelegadosFeature() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal Reporte Oficial de Delegados */}
+      {/* Modal & Print View EXCLUSIVO para Delegados */}
       <Dialog open={openReportModal} onOpenChange={setOpenReportModal}>
-        <DialogContent className='sm:max-w-xl max-h-[85vh] overflow-y-auto'>
+        <DialogContent className='sm:max-w-3xl max-h-[90vh] overflow-y-auto'>
           <DialogHeader>
             <div className='flex items-center justify-between pe-4'>
               <DialogTitle className='text-lg font-bold flex items-center gap-2'>
                 <FileText className='h-5 w-5 text-primary' />
-                Nómina Oficial de Delegados por Mesa
+                Vista Previa de Impresión — Nómina de Delegados
               </DialogTitle>
-              <Button onClick={() => window.print()} variant='outline' size='sm' className='text-xs font-bold gap-1'>
-                <Printer className='h-3.5 w-3.5' /> Imprimir
+              <Button onClick={() => window.print()} className='text-xs font-bold gap-1 bg-primary text-white'>
+                <Printer className='h-4 w-4' /> Imprimir Nómina
               </Button>
             </div>
             <DialogDescription className='text-xs'>
-              Lista de delegados acreditados para la jornada electoral USFX 2026.
+              Formato institucional A4 con cuadrícula optimizada para el Comité Electoral de la USFX.
             </DialogDescription>
           </DialogHeader>
 
-          <div className='py-2 text-xs space-y-4'>
-            <Table>
-              <TableHeader className='bg-muted/40'>
-                <TableRow>
-                  <TableHead className='py-2 font-bold'>Delegado</TableHead>
-                  <TableHead className='py-2 font-bold'>CI</TableHead>
-                  <TableHead className='py-2 font-bold'>Teléfono</TableHead>
-                  <TableHead className='py-2 font-bold text-center'>Mesa</TableHead>
-                  <TableHead className='py-2 font-bold'>Transcriptor Encargado</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {delegadosList.map((d) => (
-                  <TableRow key={d.id}>
-                    <TableCell className='py-2 font-bold'>{d.nombre}</TableCell>
-                    <TableCell className='py-2 font-mono'>{d.ci}</TableCell>
-                    <TableCell className='py-2 font-mono text-emerald-600 dark:text-emerald-400'>+591 {d.celular}</TableCell>
-                    <TableCell className='py-2 text-center font-bold'>{d.mesaCodigo}</TableCell>
-                    <TableCell className='py-2'>{d.transcriptorNombre || 'Sin asignar'}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          {/* PRINTABLE AREA CONTAINER */}
+          <div id='printable-area' className='p-6 bg-white text-black font-sans space-y-6 text-xs border border-gray-300 rounded-lg shadow-sm'>
+            {/* Header Institucional USFX */}
+            <div className='border-b-2 border-black pb-4 text-center space-y-1'>
+              <h2 className='text-sm font-black uppercase tracking-wider text-black'>
+                UNIVERSIDAD MAYOR, REAL Y PONTIFICIA DE SAN FRANCISCO XAVIER DE CHUQUISACA
+              </h2>
+              <h3 className='text-base font-extrabold uppercase text-red-900 pt-0.5'>
+                ELECCIONES AUTORIDADES UNIVERSITARIAS 2026 — VICERRECTORADO
+              </h3>
+              <p className='text-xs font-bold uppercase text-black pt-1 bg-gray-100 inline-block px-4 py-1 border border-gray-400 rounded-sm'>
+                NÓMINA OFICIAL DE DELEGADOS DE MESA ACREDITADOS
+              </p>
+              <div className='flex justify-between items-center text-[10px] text-gray-700 pt-3 font-mono'>
+                <span><strong>Lugar:</strong> Sucre, Chuquisaca - Bolivia</span>
+                <span><strong>Fecha de Emisión:</strong> {new Date().toLocaleDateString('es-BO')} {new Date().toLocaleTimeString()}</span>
+              </div>
+            </div>
+
+            {/* Tabla Estructurada para Impresión */}
+            <div className='overflow-hidden border border-black rounded-xs'>
+              <table className='w-full text-left border-collapse'>
+                <thead>
+                  <tr className='bg-gray-200 text-black font-bold uppercase text-[10px] border-b border-black'>
+                    <th className='p-2 border-r border-black text-center w-8'>N°</th>
+                    <th className='p-2 border-r border-black'>Nombre del Delegado</th>
+                    <th className='p-2 border-r border-black w-24'>Carnet (CI)</th>
+                    <th className='p-2 border-r border-black w-24'>Celular</th>
+                    <th className='p-2 border-r border-black text-center w-24'>Mesa</th>
+                    <th className='p-2 border-r border-black'>Transcriptor Encargado</th>
+                    <th className='p-2 text-center w-20'>Estado</th>
+                  </tr>
+                </thead>
+                <tbody className='divide-y divide-gray-400'>
+                  {delegadosList.map((d, index) => (
+                    <tr key={d.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className='p-2 border-r border-black text-center font-bold text-[11px]'>{index + 1}</td>
+                      <td className='p-2 border-r border-black font-bold text-xs text-black'>{d.nombre}</td>
+                      <td className='p-2 border-r border-black font-mono text-[11px] text-gray-900'>{d.ci}</td>
+                      <td className='p-2 border-r border-black font-mono text-[11px] text-gray-900'>+591 {d.celular}</td>
+                      <td className='p-2 border-r border-black text-center font-bold text-xs'>{d.mesaCodigo}</td>
+                      <td className='p-2 border-r border-black font-medium text-[11px] text-gray-800'>
+                        {d.transcriptorNombre || 'Sin asignar'}
+                      </td>
+                      <td className='p-2 text-center font-bold text-[10px]'>
+                        {d.isActive ? (
+                          <span className='text-emerald-800 uppercase font-black'>ACTIVO</span>
+                        ) : (
+                          <span className='text-red-700 uppercase font-bold'>INACTIVO</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Firmas Institucionales */}
+            <div className='pt-12 grid grid-cols-2 gap-12 text-center text-xs font-semibold'>
+              <div className='border-t border-black pt-2'>
+                <p className='font-bold uppercase text-black'>FIRMA DELEGADO GENERAL</p>
+                <p className='text-[10px] text-gray-600'>Representación Autorizada</p>
+              </div>
+
+              <div className='border-t border-black pt-2'>
+                <p className='font-bold uppercase text-black'>COMITÉ ELECTORAL USFX</p>
+                <p className='text-[10px] text-gray-600'>Sello y Acreditación Oficial</p>
+              </div>
+            </div>
           </div>
 
           <DialogFooter>
             <Button onClick={() => setOpenReportModal(false)} className='text-xs font-bold'>
-              Cerrar Nomina
+              Cerrar Vista Previa
             </Button>
           </DialogFooter>
         </DialogContent>

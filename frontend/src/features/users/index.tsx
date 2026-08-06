@@ -37,7 +37,6 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Users,
   UserPlus,
-  KeyRound,
   Edit,
   Search,
   ShieldCheck,
@@ -109,6 +108,9 @@ export function UsersFeature() {
     return matchesSearch && matchesRole
   })
 
+  // List of ONLY transcriptores for dedicated report
+  const transcriptoresList = usersList.filter((u) => u.role === 'TRANSCRIPTOR')
+
   const handleOpenAdd = () => {
     setEditingUser(null)
     form.reset({ name: '', username: '', telefono: '', role: 'TRANSCRIPTOR', password: '' })
@@ -148,6 +150,13 @@ export function UsersFeature() {
     setAssigningUser(null)
   }
 
+  const handleTriggerPrint = () => {
+    setOpenReportModal(true)
+    setTimeout(() => {
+      window.print()
+    }, 300)
+  }
+
   function onSubmit(values: z.infer<typeof userSchema>) {
     if (editingUser) {
       setUsersList((prev) =>
@@ -178,7 +187,7 @@ export function UsersFeature() {
       <Header>
         <div className='flex items-center gap-3 me-auto'>
           <Users className='h-5 w-5 text-primary' />
-          <h1 className='text-base font-bold tracking-tight'>Gestión de Usuarios, Roles y Asignaciones</h1>
+          <h1 className='text-base font-bold tracking-tight'>Gestión de Usuarios y Roles</h1>
         </div>
         <div className='flex items-center gap-3'>
           <LiveStatusBadge />
@@ -190,19 +199,19 @@ export function UsersFeature() {
       <Main className='space-y-6 p-4 sm:p-6'>
         <div className='flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4'>
           <div>
-            <h2 className='text-2xl font-bold tracking-tight'>Usuarios y Asignación de Mesas</h2>
+            <h2 className='text-2xl font-bold tracking-tight'>Usuarios del Sistema</h2>
             <p className='text-xs text-muted-foreground mt-0.5'>
-              Control de acceso por roles, asignación directa de mesas a transcriptores y reporte oficial.
+              Control de acceso por roles, números de celular y asignación directa de mesas.
             </p>
           </div>
 
           <div className='flex items-center gap-2'>
             <Button
-              onClick={() => setOpenReportModal(true)}
+              onClick={handleTriggerPrint}
               variant='outline'
-              className='font-semibold gap-2 text-xs'
+              className='font-semibold gap-2 text-xs border-primary/30 text-primary hover:bg-primary/5'
             >
-              <Printer className='h-4 w-4 text-primary' /> Generar Reporte Oficial
+              <Printer className='h-4 w-4' /> Imprimir Lista de Transcriptores
             </Button>
 
             <Button onClick={handleOpenAdd} className='font-semibold gap-2 shadow-sm text-xs'>
@@ -248,7 +257,7 @@ export function UsersFeature() {
                     <TableHead className='font-semibold text-xs py-3 w-[130px]'>Usuario</TableHead>
                     <TableHead className='font-semibold text-xs py-3 w-[130px]'>Teléfono Celular</TableHead>
                     <TableHead className='font-semibold text-xs py-3 w-[130px]'>Rol Asignado</TableHead>
-                    <TableHead className='font-semibold text-xs py-3 w-[200px]'>Mesas Bajo su Cuidado</TableHead>
+                    <TableHead className='font-semibold text-xs py-3 w-[200px]'>Mesas Asignadas</TableHead>
                     <TableHead className='font-semibold text-xs py-3 text-center w-[100px]'>Estado</TableHead>
                     <TableHead className='font-semibold text-xs py-3 text-right w-[120px]'>Acciones</TableHead>
                   </TableRow>
@@ -311,7 +320,7 @@ export function UsersFeature() {
                                 size='sm'
                                 className='h-6 px-1.5 text-[10px] font-bold text-primary hover:bg-primary/10 ml-1'
                               >
-                                <Settings2 className='h-3 w-3 mr-0.5' /> Editar
+                                <Settings2 className='h-3 w-3 mr-0.5' /> Asignar
                               </Button>
                             </div>
                           ) : (
@@ -467,80 +476,102 @@ export function UsersFeature() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal Reporte Oficial de Transcriptores y Delegados */}
+      {/* Modal & Print View EXCLUSIVO para Transcriptores */}
       <Dialog open={openReportModal} onOpenChange={setOpenReportModal}>
-        <DialogContent className='sm:max-w-2xl max-h-[85vh] overflow-y-auto'>
+        <DialogContent className='sm:max-w-3xl max-h-[90vh] overflow-y-auto'>
           <DialogHeader>
             <div className='flex items-center justify-between pe-4'>
               <DialogTitle className='text-lg font-bold flex items-center gap-2'>
                 <FileText className='h-5 w-5 text-primary' />
-                Reporte Oficial de Transcriptores y Delegados
+                Vista Previa de Impresión — Lista de Transcriptores
               </DialogTitle>
-              <Button
-                onClick={() => window.print()}
-                variant='outline'
-                size='sm'
-                className='text-xs font-bold gap-1'
-              >
-                <Printer className='h-3.5 w-3.5' /> Imprimir
+              <Button onClick={() => window.print()} className='text-xs font-bold gap-1 bg-primary text-white'>
+                <Printer className='h-4 w-4' /> Imprimir Reporte
               </Button>
             </div>
             <DialogDescription className='text-xs'>
-              Nomina oficial de personal de transcripción, teléfonos y delegados por mesa (USFX 2026).
+              Nómina oficial de personal transcriptor acreditado para la carga de actas electoral (USFX 2026).
             </DialogDescription>
           </DialogHeader>
 
-          <div className='space-y-5 py-3 text-xs'>
-            {asignaciones.map((asig) => (
-              <div key={asig.transcriptorId} className='p-4 rounded-xl border bg-muted/20 space-y-3'>
-                <div className='flex items-center justify-between border-b pb-2'>
-                  <div>
-                    <h4 className='font-extrabold text-sm text-foreground'>{asig.transcriptorNombre}</h4>
-                    <p className='text-xs text-muted-foreground flex items-center gap-1 font-mono'>
-                      <Phone className='h-3 w-3 text-emerald-600 dark:text-emerald-400' /> Teléfono: +591 {asig.transcriptorTelefono}
-                    </p>
-                  </div>
-
-                  <div className='flex items-center gap-1'>
-                    {asig.mesasCodigos.map((m) => (
-                      <Badge key={m} className='bg-primary text-primary-foreground font-mono text-[10px]'>
-                        {m}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-
-                <div className='space-y-1.5'>
-                  <p className='font-bold text-[11px] uppercase tracking-wider text-muted-foreground'>
-                    Delegados de Mesa a su Cargo:
-                  </p>
-
-                  <Table>
-                    <TableHeader className='bg-card'>
-                      <TableRow>
-                        <TableHead className='py-2 text-[11px] font-bold'>Delegado</TableHead>
-                        <TableHead className='py-2 text-[11px] font-bold'>Teléfono Celular</TableHead>
-                        <TableHead className='py-2 text-[11px] font-bold text-center'>Mesa</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {asig.delegados.map((d) => (
-                        <TableRow key={d.id}>
-                          <TableCell className='py-2 font-semibold text-xs'>{d.nombre}</TableCell>
-                          <TableCell className='py-2 font-mono text-xs text-emerald-600 dark:text-emerald-400'>+591 {d.celular}</TableCell>
-                          <TableCell className='py-2 text-center font-bold text-xs'>{d.mesaCodigo}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+          {/* PRINTABLE AREA CONTAINER EXCLUSIVO TRANSCRIPTORES */}
+          <div id='printable-area' className='p-6 bg-white text-black font-sans space-y-6 text-xs border border-gray-300 rounded-lg shadow-sm'>
+            {/* Header Institucional USFX */}
+            <div className='border-b-2 border-black pb-4 text-center space-y-1'>
+              <h2 className='text-sm font-black uppercase tracking-wider text-black'>
+                UNIVERSIDAD MAYOR, REAL Y PONTIFICIA DE SAN FRANCISCO XAVIER DE CHUQUISACA
+              </h2>
+              <h3 className='text-base font-extrabold uppercase text-red-900 pt-0.5'>
+                ELECCIONES AUTORIDADES UNIVERSITARIAS 2026 — VICERRECTORADO
+              </h3>
+              <p className='text-xs font-bold uppercase text-black pt-1 bg-gray-100 inline-block px-4 py-1 border border-gray-400 rounded-sm'>
+                NÓMINA Y REGISTRO OFICIAL DE PERSONAL TRANSCRIPTOR AUTORIZADO
+              </p>
+              <div className='flex justify-between items-center text-[10px] text-gray-700 pt-3 font-mono'>
+                <span><strong>Unidad:</strong> Centro de Cómputo Electoral</span>
+                <span><strong>Fecha de Emisión:</strong> {new Date().toLocaleDateString('es-BO')} {new Date().toLocaleTimeString()}</span>
               </div>
-            ))}
+            </div>
+
+            {/* Tabla de Transcriptores Únicamente */}
+            <div className='overflow-hidden border border-black rounded-xs'>
+              <table className='w-full text-left border-collapse'>
+                <thead>
+                  <tr className='bg-gray-200 text-black font-bold uppercase text-[10px] border-b border-black'>
+                    <th className='p-2 border-r border-black text-center w-8'>N°</th>
+                    <th className='p-2 border-r border-black'>Nombre del Transcriptor</th>
+                    <th className='p-2 border-r border-black w-24'>Usuario</th>
+                    <th className='p-2 border-r border-black w-28'>Teléfono Celular</th>
+                    <th className='p-2 border-r border-black'>Mesas Asignadas Bajo su Cuidado</th>
+                    <th className='p-2 border-r border-black text-center w-20'>Total Mesas</th>
+                    <th className='p-2 text-center w-20'>Estado</th>
+                  </tr>
+                </thead>
+                <tbody className='divide-y divide-gray-400'>
+                  {transcriptoresList.map((t, index) => {
+                    const asig = asignaciones.find((a) => a.transcriptorId === t.id)
+                    const mesasCodigos = asig ? asig.mesasCodigos.join(', ') : 'Sin mesas asignadas'
+                    const totalMesas = asig ? asig.mesasCodigos.length : 0
+
+                    return (
+                      <tr key={t.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        <td className='p-2 border-r border-black text-center font-bold text-[11px]'>{index + 1}</td>
+                        <td className='p-2 border-r border-black font-bold text-xs text-black'>{t.name}</td>
+                        <td className='p-2 border-r border-black font-mono text-[11px] text-gray-900'>@{t.username}</td>
+                        <td className='p-2 border-r border-black font-mono text-[11px] text-gray-900'>+591 {t.telefono}</td>
+                        <td className='p-2 border-r border-black font-bold text-xs text-gray-900'>{mesasCodigos}</td>
+                        <td className='p-2 border-r border-black text-center font-bold text-xs'>{totalMesas}</td>
+                        <td className='p-2 text-center font-bold text-[10px]'>
+                          {t.isActive ? (
+                            <span className='text-emerald-800 uppercase font-black'>ACTIVO</span>
+                          ) : (
+                            <span className='text-red-700 uppercase font-bold'>INACTIVO</span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Firmas de Autorización */}
+            <div className='pt-12 grid grid-cols-2 gap-12 text-center text-xs font-semibold'>
+              <div className='border-t border-black pt-2'>
+                <p className='font-bold uppercase text-black'>RESPONSABLE DE CÓMPUTO</p>
+                <p className='text-[10px] text-gray-600'>Supervisión Técnica USFX</p>
+              </div>
+
+              <div className='border-t border-black pt-2'>
+                <p className='font-bold uppercase text-black'>COMITÉ ELECTORAL UNIVERSITARIO</p>
+                <p className='text-[10px] text-gray-600'>Acreditación y Sello Oficial</p>
+              </div>
+            </div>
           </div>
 
           <DialogFooter>
             <Button onClick={() => setOpenReportModal(false)} className='text-xs font-bold'>
-              Cerrar Reporte
+              Cerrar Vista Previa
             </Button>
           </DialogFooter>
         </DialogContent>
