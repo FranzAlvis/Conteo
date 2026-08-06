@@ -126,21 +126,12 @@ export function ResultadosFeature() {
                 <div>
                   <CardTitle className='text-lg font-bold flex items-center gap-2'>
                     <Activity className='h-5 w-5 text-primary' />
-                    Cómputo en Tiempo Real por Candidatura
+                    Porcentajes y Tendencias de la Elección
                   </CardTitle>
                   <CardDescription className='text-xs pt-1'>
-                    {activeSector === 'ponderado'
-                      ? 'Total Ponderado acumulado (Estudiantes + 45 * Docentes).'
-                      : activeSector === 'estudiantil'
-                        ? 'Votos nominales de mesas estudiantiles.'
-                        : 'Votos nominales de la mesa de docentes.'}
+                    Distribución porcentual del cómputo con resalte del candidato ganador.
                   </CardDescription>
                 </div>
-                {activeSector === 'ponderado' && (
-                  <Badge variant='outline' className='bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 font-bold text-xs gap-1'>
-                    <Zap className='h-3 w-3' /> Ponderación 1:45
-                  </Badge>
-                )}
               </div>
             </CardHeader>
             <CardContent>

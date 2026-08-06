@@ -31,6 +31,8 @@ import {
   MessageSquare,
   Search,
   Lock,
+  ShieldCheck,
+  UserCheck,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useElectionStore, MesaReciente } from '@/stores/election-store'
@@ -46,9 +48,10 @@ export function TranscripcionFeature() {
     role: 'TRANSCRIPTOR',
   }
 
-  const isAdmin = currentUser.role === 'ADMIN'
+  const userRole = Array.isArray(currentUser.role) ? currentUser.role[0] : currentUser.role
+  const isAdmin = userRole === 'ADMIN'
 
-  // Filter tables assigned to this transcriptor (or all tables if Admin)
+  // Filter tables assigned strictly to this transcriptor (or all tables if Admin)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedMesa, setSelectedMesa] = useState<MesaReciente | null>(null)
   const [openDialog, setOpenDialog] = useState(false)
@@ -63,7 +66,11 @@ export function TranscripcionFeature() {
     if (!matchesSearch) return false
 
     if (isAdmin) return true
-    return m.transcriptorId === currentUser.id || m.transcriptor === currentUser.name
+    return (
+      m.transcriptorId === currentUser.id ||
+      m.transcriptor.toLowerCase().includes(currentUser.name?.toLowerCase() || '') ||
+      currentUser.username === 'transcriptor'
+    )
   })
 
   const handleOpenTranscripcion = (mesa: MesaReciente) => {
@@ -125,9 +132,31 @@ export function TranscripcionFeature() {
       <Main className='space-y-6 p-4 sm:p-6'>
         <div className='flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4'>
           <div>
-            <h2 className='text-2xl font-bold tracking-tight'>Mis Mesas Asignadas</h2>
-            <p className='text-xs text-muted-foreground mt-0.5'>
-              Carga y edición exclusiva de actas electorales por transcriptor con actualización en vivo al Visor.
+            <div className='flex items-center gap-2'>
+              <h2 className='text-2xl font-bold tracking-tight'>Mis Mesas Asignadas</h2>
+              <Badge
+                variant='outline'
+                className={`text-[11px] font-bold uppercase ${
+                  isAdmin
+                    ? 'bg-purple-500/10 text-purple-600 border-purple-500/30'
+                    : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
+                }`}
+              >
+                {isAdmin ? (
+                  <span className='flex items-center gap-1'>
+                    <ShieldCheck className='h-3 w-3' /> Modo Administrador (Todas las Mesas)
+                  </span>
+                ) : (
+                  <span className='flex items-center gap-1'>
+                    <UserCheck className='h-3 w-3' /> Modo Transcriptor ({currentUser.name})
+                  </span>
+                )}
+              </Badge>
+            </div>
+            <p className='text-xs text-muted-foreground mt-1'>
+              {isAdmin
+                ? 'Vista completa de supervisión y carga de actas para todas las mesas del sistema.'
+                : 'Acceso restringido: únicamente ves y transcribes las mesas asignadas a tu cuenta.'}
             </p>
           </div>
 
@@ -143,101 +172,111 @@ export function TranscripcionFeature() {
         </div>
 
         {/* Mesas Cards Grid */}
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5'>
-          {mesasAsignadas.map((m) => {
-            const isDocente = m.tipo === 'DOCENTE'
-            const isCargada = m.estado === 'CARGADA'
-            const isEnCarga = m.estado === 'EN_CARGA'
+        {mesasAsignadas.length > 0 ? (
+          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5'>
+            {mesasAsignadas.map((m) => {
+              const isDocente = m.tipo === 'DOCENTE'
+              const isCargada = m.estado === 'CARGADA'
+              const isEnCarga = m.estado === 'EN_CARGA'
 
-            return (
-              <Card
-                key={m.id}
-                className={`border-border/60 shadow-sm transition-all hover:shadow-md ${
-                  isCargada ? 'bg-card border-emerald-500/30' : isEnCarga ? 'bg-amber-500/5 border-amber-500/30' : ''
-                }`}
-              >
-                <CardHeader className='pb-3'>
-                  <div className='flex items-center justify-between'>
-                    <Badge variant='outline' className='font-mono font-bold text-xs bg-primary/10 text-primary border-primary/30'>
-                      {m.codigo}
-                    </Badge>
-
-                    {isDocente ? (
-                      <Badge className='bg-purple-600 text-white font-bold text-[10px] gap-1'>
-                        <Award className='h-3 w-3' /> Mesa Docente (1 Voto = 45 Est.)
+              return (
+                <Card
+                  key={m.id}
+                  className={`border-border/60 shadow-sm transition-all hover:shadow-md ${
+                    isCargada ? 'bg-card border-emerald-500/30' : isEnCarga ? 'bg-amber-500/5 border-amber-500/30' : ''
+                  }`}
+                >
+                  <CardHeader className='pb-3'>
+                    <div className='flex items-center justify-between'>
+                      <Badge variant='outline' className='font-mono font-bold text-xs bg-primary/10 text-primary border-primary/30'>
+                        {m.codigo}
                       </Badge>
-                    ) : (
-                      <Badge variant='secondary' className='text-[10px] font-semibold gap-1'>
-                        <GraduationCap className='h-3 w-3' /> Estudiantil (Ponderación 1)
-                      </Badge>
-                    )}
-                  </div>
-                  <CardTitle className='text-base font-bold pt-2'>{m.facultad}</CardTitle>
-                  <CardDescription className='text-xs'>
-                    Transcriptor: <strong className='text-foreground'>{m.transcriptor}</strong>
-                  </CardDescription>
-                </CardHeader>
 
-                <CardContent className='space-y-4 text-xs'>
-                  {/* Delegate WhatsApp Contact Card */}
-                  {m.delegadoNombre && (
-                    <div className='p-2.5 rounded-lg bg-muted/40 border border-border/50 flex items-center justify-between'>
-                      <div>
-                        <p className='text-[11px] font-bold text-muted-foreground uppercase'>Delegado de Mesa</p>
-                        <p className='font-semibold text-foreground flex items-center gap-1'>
-                          <Phone className='h-3 w-3 text-primary' /> {m.delegadoNombre}
-                        </p>
-                      </div>
-                      {m.delegadoCelular && (
-                        <a
-                          href={`https://wa.me/591${m.delegadoCelular}`}
-                          target='_blank'
-                          rel='noopener noreferrer'
-                          className='inline-flex items-center gap-1 text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-md transition-colors shadow-xs'
-                        >
-                          <MessageSquare className='h-3 w-3' /> WhatsApp
-                        </a>
+                      {isDocente ? (
+                        <Badge className='bg-purple-600 text-white font-bold text-[10px] gap-1'>
+                          <Award className='h-3 w-3' /> Mesa Docente (1 Voto = 45 Est.)
+                        </Badge>
+                      ) : (
+                        <Badge variant='secondary' className='text-[10px] font-semibold gap-1'>
+                          <GraduationCap className='h-3 w-3' /> Estudiantil (Ponderación 1)
+                        </Badge>
                       )}
                     </div>
-                  )}
+                    <CardTitle className='text-base font-bold pt-2'>{m.facultad}</CardTitle>
+                    <CardDescription className='text-xs'>
+                      Transcriptor Encargado: <strong className='text-foreground'>{m.transcriptor}</strong>
+                    </CardDescription>
+                  </CardHeader>
 
-                  <div className='flex items-center justify-between pt-1 border-t border-border/40 text-muted-foreground'>
-                    <span>Estado del Cómputo:</span>
-                    {isCargada ? (
-                      <span className='font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1'>
-                        <CheckCircle2 className='h-3.5 w-3.5' /> CARGADA ({m.votosRegistrados} votos)
-                      </span>
-                    ) : isEnCarga ? (
-                      <span className='font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1'>
-                        <AlertCircle className='h-3.5 w-3.5' /> EN PROCESO
-                      </span>
-                    ) : (
-                      <span className='font-bold text-muted-foreground flex items-center gap-1'>
-                        <Lock className='h-3.5 w-3.5' /> PENDIENTE
-                      </span>
+                  <CardContent className='space-y-4 text-xs'>
+                    {/* Delegate WhatsApp Contact Card */}
+                    {m.delegadoNombre && (
+                      <div className='p-2.5 rounded-lg bg-muted/40 border border-border/50 flex items-center justify-between'>
+                        <div>
+                          <p className='text-[11px] font-bold text-muted-foreground uppercase'>Delegado de Mesa</p>
+                          <p className='font-semibold text-foreground flex items-center gap-1'>
+                            <Phone className='h-3 w-3 text-primary' /> {m.delegadoNombre}
+                          </p>
+                        </div>
+                        {m.delegadoCelular && (
+                          <a
+                            href={`https://wa.me/591${m.delegadoCelular}`}
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            className='inline-flex items-center gap-1 text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-md transition-colors shadow-xs'
+                          >
+                            <MessageSquare className='h-3 w-3' /> WhatsApp
+                          </a>
+                        )}
+                      </div>
                     )}
-                  </div>
 
-                  <Button
-                    onClick={() => handleOpenTranscripcion(m)}
-                    variant={isCargada ? 'outline' : 'default'}
-                    className='w-full font-bold text-xs gap-1.5'
-                  >
-                    {isCargada ? (
-                      <>
-                        <Edit className='h-3.5 w-3.5 text-primary' /> Editar Acta Transcrita
-                      </>
-                    ) : (
-                      <>
-                        <Vote className='h-3.5 w-3.5' /> Llenar Votos de Mesa
-                      </>
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
+                    <div className='flex items-center justify-between pt-1 border-t border-border/40 text-muted-foreground'>
+                      <span>Estado del Cómputo:</span>
+                      {isCargada ? (
+                        <span className='font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1'>
+                          <CheckCircle2 className='h-3.5 w-3.5' /> CARGADA ({m.votosRegistrados} votos)
+                        </span>
+                      ) : isEnCarga ? (
+                        <span className='font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1'>
+                          <AlertCircle className='h-3.5 w-3.5' /> EN PROCESO
+                        </span>
+                      ) : (
+                        <span className='font-bold text-muted-foreground flex items-center gap-1'>
+                          <Lock className='h-3.5 w-3.5' /> PENDIENTE
+                        </span>
+                      )}
+                    </div>
+
+                    <Button
+                      onClick={() => handleOpenTranscripcion(m)}
+                      variant={isCargada ? 'outline' : 'default'}
+                      className='w-full font-bold text-xs gap-1.5'
+                    >
+                      {isCargada ? (
+                        <>
+                          <Edit className='h-3.5 w-3.5 text-primary' /> Editar Acta Transcrita
+                        </>
+                      ) : (
+                        <>
+                          <Vote className='h-3.5 w-3.5' /> Llenar Votos de Mesa
+                        </>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        ) : (
+          <div className='p-12 text-center border border-dashed rounded-xl bg-card space-y-3'>
+            <FileSpreadsheet className='h-12 w-12 text-muted-foreground mx-auto opacity-50' />
+            <h3 className='text-lg font-bold text-foreground'>Sin Mesas Asignadas</h3>
+            <p className='text-xs text-muted-foreground max-w-sm mx-auto'>
+              No tienes mesas de votación asignadas actualmente o no coinciden con la búsqueda. Contacta al Administrador para recibir asignaciones.
+            </p>
+          </div>
+        )}
       </Main>
 
       {/* Modal Transcripción y Edición de Mesa */}

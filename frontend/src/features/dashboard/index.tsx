@@ -17,11 +17,14 @@ export function Dashboard() {
   const {
     mesasCargadas,
     totalMesas,
-    totalVotos,
+    totalVotosPonderados,
+    totalVotosEstudiantiles,
     totalPadron,
     conteoAbierto,
     updateElectionData,
   } = useElectionStore()
+
+  const totalVotos = totalVotosPonderados || 0
 
   const porcentajeMesas = totalMesas > 0 ? Math.round((mesasCargadas / totalMesas) * 100) : 0
   const porcentajeParticipacion = totalPadron > 0 ? ((totalVotos / totalPadron) * 100).toFixed(1) : '0'
