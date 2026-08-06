@@ -33,7 +33,20 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
-import { UserCheck, UserPlus, Search, Edit, Trash2, Phone, Mail, CreditCard, Vote } from 'lucide-react'
+import {
+  UserCheck,
+  UserPlus,
+  Search,
+  Edit,
+  Trash2,
+  Phone,
+  Mail,
+  CreditCard,
+  Vote,
+  Printer,
+  FileText,
+  MessageSquare,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -47,6 +60,7 @@ export interface DelegadoItem {
   celular: string
   correo?: string
   mesaCodigo: string
+  transcriptorNombre?: string
   isActive: boolean
 }
 
@@ -58,6 +72,7 @@ const initialDelegados: DelegadoItem[] = [
     celular: '71234567',
     correo: 'ana.roca@usfx.edu.bo',
     mesaCodigo: 'MESA-01',
+    transcriptorNombre: 'Juan Carlos Pérez',
     isActive: true,
   },
   {
@@ -67,6 +82,7 @@ const initialDelegados: DelegadoItem[] = [
     celular: '68019283',
     correo: 'jorge.gutierrez@gmail.com',
     mesaCodigo: 'MESA-02',
+    transcriptorNombre: 'Juan Carlos Pérez',
     isActive: true,
   },
   {
@@ -76,7 +92,18 @@ const initialDelegados: DelegadoItem[] = [
     celular: '76543210',
     correo: 'mariana.paz@usfx.edu.bo',
     mesaCodigo: 'MESA-03',
+    transcriptorNombre: 'María Elena Torrez',
     isActive: false,
+  },
+  {
+    id: 'd4',
+    nombre: 'Dr. Fernando Arancibia',
+    ci: '3410928 CH',
+    celular: '77889900',
+    correo: 'f.arancibia@usfx.edu.bo',
+    mesaCodigo: 'MESA-DOC-01',
+    transcriptorNombre: 'María Elena Torrez',
+    isActive: true,
   },
 ]
 
@@ -95,6 +122,7 @@ export function DelegadosFeature() {
   const [delegadosList, setDelegadosList] = useState<DelegadoItem[]>(initialDelegados)
   const [searchTerm, setSearchTerm] = useState('')
   const [openModal, setOpenModal] = useState(false)
+  const [openReportModal, setOpenReportModal] = useState(false)
   const [editingDelegado, setEditingDelegado] = useState<DelegadoItem | null>(null)
 
   const form = useForm<DelegadoFormValues>({
@@ -198,12 +226,23 @@ export function DelegadosFeature() {
           <div>
             <h2 className='text-2xl font-bold tracking-tight'>Delegados Electorales</h2>
             <p className='text-xs text-muted-foreground mt-0.5'>
-              Control de representantes asignados por mesa, datos de contacto (CI, Celular) y estado activo.
+              Representantes de mesa, celulares para coordinación por WhatsApp y transcriptor asignado.
             </p>
           </div>
-          <Button onClick={handleOpenAdd} className='font-semibold gap-2 shadow-sm'>
-            <UserPlus className='h-4 w-4' /> Registrar Nuevo Delegado
-          </Button>
+
+          <div className='flex items-center gap-2'>
+            <Button
+              onClick={() => setOpenReportModal(true)}
+              variant='outline'
+              className='font-semibold gap-2 text-xs'
+            >
+              <Printer className='h-4 w-4 text-primary' /> Imprimir Nomina
+            </Button>
+
+            <Button onClick={handleOpenAdd} className='font-semibold gap-2 shadow-sm text-xs'>
+              <UserPlus className='h-4 w-4' /> Registrar Delegado
+            </Button>
+          </div>
         </div>
 
         <Card className='border-border/60 shadow-sm'>
@@ -224,12 +263,12 @@ export function DelegadosFeature() {
               <Table>
                 <TableHeader className='bg-muted/40'>
                   <TableRow>
-                    <TableHead className='font-semibold text-xs py-3 w-[220px]'>Nombre Completo</TableHead>
-                    <TableHead className='font-semibold text-xs py-3 w-[140px]'>Carnet (CI)</TableHead>
-                    <TableHead className='font-semibold text-xs py-3 w-[130px]'>Celular</TableHead>
-                    <TableHead className='font-semibold text-xs py-3 w-[200px]'>Correo Electrónico</TableHead>
-                    <TableHead className='font-semibold text-xs py-3 text-center w-[140px]'>Mesa Asignada</TableHead>
-                    <TableHead className='font-semibold text-xs py-3 text-center w-[120px]'>Estado Activo</TableHead>
+                    <TableHead className='font-semibold text-xs py-3 w-[200px]'>Nombre Completo</TableHead>
+                    <TableHead className='font-semibold text-xs py-3 w-[130px]'>Carnet (CI)</TableHead>
+                    <TableHead className='font-semibold text-xs py-3 w-[150px]'>Teléfono Celular</TableHead>
+                    <TableHead className='font-semibold text-xs py-3 w-[180px]'>Transcriptor Responsable</TableHead>
+                    <TableHead className='font-semibold text-xs py-3 text-center w-[130px]'>Mesa Asignada</TableHead>
+                    <TableHead className='font-semibold text-xs py-3 text-center w-[100px]'>Estado</TableHead>
                     <TableHead className='font-semibold text-xs py-3 text-right w-[100px]'>Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -242,40 +281,53 @@ export function DelegadosFeature() {
                           <span>{d.nombre}</span>
                         </div>
                       </TableCell>
+
                       <TableCell className='text-xs font-mono text-muted-foreground py-3'>
                         <div className='flex items-center gap-1.5'>
                           <CreditCard className='h-3.5 w-3.5 text-muted-foreground shrink-0' />
                           <span>{d.ci}</span>
                         </div>
                       </TableCell>
+
                       <TableCell className='text-xs font-medium text-foreground py-3'>
-                        <div className='flex items-center gap-1.5'>
-                          <Phone className='h-3.5 w-3.5 text-muted-foreground shrink-0' />
-                          <span>{d.celular}</span>
+                        <div className='flex items-center gap-1.5 justify-between pr-2'>
+                          <span className='flex items-center gap-1.5 font-mono'>
+                            <Phone className='h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0' />
+                            +591 {d.celular}
+                          </span>
+                          <a
+                            href={`https://wa.me/591${d.celular}`}
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            className='inline-flex items-center gap-1 text-[10px] font-bold bg-emerald-600 text-white px-2 py-0.5 rounded transition-colors shadow-xs'
+                          >
+                            <MessageSquare className='h-3 w-3' /> WA
+                          </a>
                         </div>
                       </TableCell>
+
                       <TableCell className='text-xs text-muted-foreground py-3'>
-                        {d.correo ? (
-                          <div className='flex items-center gap-1.5'>
-                            <Mail className='h-3.5 w-3.5 text-muted-foreground shrink-0' />
-                            <span>{d.correo}</span>
-                          </div>
+                        {d.transcriptorNombre ? (
+                          <span className='font-semibold text-foreground'>{d.transcriptorNombre}</span>
                         ) : (
-                          <span className='italic text-[11px] text-muted-foreground/60'>No registrado</span>
+                          <span className='italic text-[11px] text-muted-foreground'>Sin asignar</span>
                         )}
                       </TableCell>
+
                       <TableCell className='text-center py-3'>
                         <Badge variant='outline' className='bg-primary/10 text-primary border-primary/30 font-bold text-xs gap-1 inline-flex items-center'>
                           <Vote className='h-3 w-3' />
                           {d.mesaCodigo}
                         </Badge>
                       </TableCell>
+
                       <TableCell className='text-center py-3'>
                         <Switch
                           checked={d.isActive}
                           onCheckedChange={() => handleToggleStatus(d.id)}
                         />
                       </TableCell>
+
                       <TableCell className='text-right py-3 space-x-1'>
                         <Button
                           variant='ghost'
@@ -367,6 +419,57 @@ export function DelegadosFeature() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Reporte Oficial de Delegados */}
+      <Dialog open={openReportModal} onOpenChange={setOpenReportModal}>
+        <DialogContent className='sm:max-w-xl max-h-[85vh] overflow-y-auto'>
+          <DialogHeader>
+            <div className='flex items-center justify-between pe-4'>
+              <DialogTitle className='text-lg font-bold flex items-center gap-2'>
+                <FileText className='h-5 w-5 text-primary' />
+                Nómina Oficial de Delegados por Mesa
+              </DialogTitle>
+              <Button onClick={() => window.print()} variant='outline' size='sm' className='text-xs font-bold gap-1'>
+                <Printer className='h-3.5 w-3.5' /> Imprimir
+              </Button>
+            </div>
+            <DialogDescription className='text-xs'>
+              Lista de delegados acreditados para la jornada electoral USFX 2026.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='py-2 text-xs space-y-4'>
+            <Table>
+              <TableHeader className='bg-muted/40'>
+                <TableRow>
+                  <TableHead className='py-2 font-bold'>Delegado</TableHead>
+                  <TableHead className='py-2 font-bold'>CI</TableHead>
+                  <TableHead className='py-2 font-bold'>Teléfono</TableHead>
+                  <TableHead className='py-2 font-bold text-center'>Mesa</TableHead>
+                  <TableHead className='py-2 font-bold'>Transcriptor Encargado</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {delegadosList.map((d) => (
+                  <TableRow key={d.id}>
+                    <TableCell className='py-2 font-bold'>{d.nombre}</TableCell>
+                    <TableCell className='py-2 font-mono'>{d.ci}</TableCell>
+                    <TableCell className='py-2 font-mono text-emerald-600 dark:text-emerald-400'>+591 {d.celular}</TableCell>
+                    <TableCell className='py-2 text-center font-bold'>{d.mesaCodigo}</TableCell>
+                    <TableCell className='py-2'>{d.transcriptorNombre || 'Sin asignar'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setOpenReportModal(false)} className='text-xs font-bold'>
+              Cerrar Nomina
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

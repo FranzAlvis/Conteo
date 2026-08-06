@@ -25,10 +25,10 @@ export const sidebarData: SidebarData = {
   ],
   navGroups: [
     {
-      title: 'Principal',
+      title: 'Cómputo & Resultados',
       items: [
         {
-          title: 'Resumen',
+          title: 'Resumen General',
           url: '/',
           icon: LayoutDashboard,
         },
@@ -42,30 +42,35 @@ export const sidebarData: SidebarData = {
           url: '/transcripcion',
           icon: FileSpreadsheet,
         },
+      ],
+    },
+    {
+      title: 'Estructura Electoral',
+      items: [
         {
           title: 'Mesas de Votación',
           url: '/mesas',
           icon: Vote,
         },
         {
-          title: 'Delegados',
+          title: 'Delegados de Mesa',
           url: '/delegados',
           icon: UserCheck,
         },
       ],
     },
     {
-      title: 'Administración',
+      title: 'Administración & Reportes',
       items: [
         {
-          title: 'Asignaciones & WhatsApp',
-          url: '/asignaciones',
-          icon: Share2,
-        },
-        {
-          title: 'Gestión de Usuarios',
+          title: 'Usuarios & Asignaciones',
           url: '/users',
           icon: Users,
+        },
+        {
+          title: 'Grupos de WhatsApp',
+          url: '/asignaciones',
+          icon: Share2,
         },
         {
           title: 'Configuración / Candidatos',
