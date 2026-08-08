@@ -1,57 +1,33 @@
-import { useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { dashboardApi } from '@/lib/api/dashboard'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { LiveStatusBadge } from '@/components/live-status-badge'
-import { useElectionStore } from '@/stores/election-store'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Vote, Users, PieChart, Activity, ShieldAlert } from 'lucide-react'
 import { CandidatosChart } from './components/candidatos-chart'
 import { RecentMesasTable } from './components/recent-mesas-table'
-import { io } from 'socket.io-client'
 
 export function Dashboard() {
-  const {
-    mesasCargadas,
-    totalMesas,
-    totalVotosPonderados,
-    totalVotosEstudiantiles,
-    totalPadron,
-    conteoAbierto,
-    updateElectionData,
-  } = useElectionStore()
+  const { data, isPending } = useQuery({
+    queryKey: ['dashboard'],
+    queryFn: dashboardApi.get,
+    refetchInterval: 30_000,
+  })
 
-  const totalVotos = totalVotosPonderados || 0
+  const mesasCargadas = data?.mesasCargadas ?? 0
+  const totalMesas = data?.totalMesas ?? 0
+  const totalVotos = data?.totalVotosPonderados ?? 0
+  const totalPadron = data?.totalPadron ?? 0
+  const conteoAbierto = data?.conteoAbierto ?? true
 
   const porcentajeMesas = totalMesas > 0 ? Math.round((mesasCargadas / totalMesas) * 100) : 0
   const porcentajeParticipacion = totalPadron > 0 ? ((totalVotos / totalPadron) * 100).toFixed(1) : '0'
-
-  // Connect to WebSocket for live updates
-  useEffect(() => {
-    const socket = io('http://localhost:3000', {
-      transports: ['websocket'],
-      autoConnect: true,
-    })
-
-    socket.on('resumenVotosActualizado', (data) => {
-      if (data) {
-        updateElectionData(data)
-      }
-    })
-
-    socket.on('conteoEstadoCambiado', (data) => {
-      if (typeof data.abierto === 'boolean') {
-        updateElectionData({ conteoAbierto: data.abierto })
-      }
-    })
-
-    return () => {
-      socket.disconnect()
-    }
-  }, [updateElectionData])
 
   return (
     <>
@@ -62,9 +38,6 @@ export function Dashboard() {
             <Vote className='h-5 w-5 text-primary' />
             <span>Conteo de Votos — Vicerrectorado 2026</span>
           </div>
-          <span className='text-xs text-muted-foreground hidden md:inline-block border-l border-border pl-3'>
-            Yamile Hayes Michel
-          </span>
         </div>
 
         <div className='flex items-center gap-3'>
@@ -114,16 +87,22 @@ export function Dashboard() {
               <Vote className='h-4 w-4 text-primary' />
             </CardHeader>
             <CardContent className='space-y-2'>
-              <div className='flex items-baseline justify-between'>
-                <div className='text-2xl font-extrabold text-foreground'>
-                  {mesasCargadas} <span className='text-sm font-normal text-muted-foreground'>/ {totalMesas}</span>
-                </div>
-                <span className='text-xs font-bold text-primary'>{porcentajeMesas}%</span>
-              </div>
-              <Progress value={porcentajeMesas} className='h-2 bg-muted' />
-              <p className='text-[11px] text-muted-foreground'>
-                {totalMesas - mesasCargadas} mesas pendientes por escrutar
-              </p>
+              {isPending ? (
+                <Skeleton className='h-16 w-full' />
+              ) : (
+                <>
+                  <div className='flex items-baseline justify-between'>
+                    <div className='text-2xl font-extrabold text-foreground'>
+                      {mesasCargadas} <span className='text-sm font-normal text-muted-foreground'>/ {totalMesas}</span>
+                    </div>
+                    <span className='text-xs font-bold text-primary'>{porcentajeMesas}%</span>
+                  </div>
+                  <Progress value={porcentajeMesas} className='h-2 bg-muted' />
+                  <p className='text-[11px] text-muted-foreground'>
+                    {totalMesas - mesasCargadas} mesas pendientes por escrutar
+                  </p>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -136,13 +115,19 @@ export function Dashboard() {
               <Users className='h-4 w-4 text-primary' />
             </CardHeader>
             <CardContent className='space-y-1'>
-              <div className='text-2xl font-extrabold text-foreground'>
-                {totalVotos.toLocaleString()}
-              </div>
-              <p className='text-xs text-muted-foreground flex items-center gap-1 pt-1'>
-                <span className='inline-block h-1.5 w-1.5 rounded-full bg-emerald-500' />
-                Votos válidamente emitidos
-              </p>
+              {isPending ? (
+                <Skeleton className='h-10 w-full' />
+              ) : (
+                <>
+                  <div className='text-2xl font-extrabold text-foreground'>
+                    {totalVotos.toLocaleString()}
+                  </div>
+                  <p className='text-xs text-muted-foreground flex items-center gap-1 pt-1'>
+                    <span className='inline-block h-1.5 w-1.5 rounded-full bg-emerald-500' />
+                    Votos válidamente emitidos
+                  </p>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -155,12 +140,18 @@ export function Dashboard() {
               <PieChart className='h-4 w-4 text-primary' />
             </CardHeader>
             <CardContent className='space-y-1'>
-              <div className='text-2xl font-extrabold text-foreground'>
-                {porcentajeParticipacion}%
-              </div>
-              <p className='text-xs text-muted-foreground pt-1'>
-                {totalVotos.toLocaleString()} de {totalPadron.toLocaleString()} inscritos
-              </p>
+              {isPending ? (
+                <Skeleton className='h-10 w-full' />
+              ) : (
+                <>
+                  <div className='text-2xl font-extrabold text-foreground'>
+                    {porcentajeParticipacion}%
+                  </div>
+                  <p className='text-xs text-muted-foreground pt-1'>
+                    {totalVotos.toLocaleString()} de {totalPadron.toLocaleString()} inscritos
+                  </p>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -207,7 +198,16 @@ export function Dashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <CandidatosChart />
+              {isPending ? (
+                <Skeleton className='h-[300px] w-full' />
+              ) : (
+                <CandidatosChart
+                  candidatos={data?.candidatos ?? []}
+                  totalVotosPonderados={data?.totalVotosPonderados ?? 0}
+                  totalVotosEstudiantiles={data?.totalVotosEstudiantiles ?? 0}
+                  totalVotosDocentes={data?.totalVotosDocentes ?? 0}
+                />
+              )}
             </CardContent>
           </Card>
 
@@ -225,7 +225,11 @@ export function Dashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <RecentMesasTable />
+              {isPending ? (
+                <Skeleton className='h-40 w-full' />
+              ) : (
+                <RecentMesasTable mesas={data?.mesasRecientes ?? []} />
+              )}
             </CardContent>
           </Card>
         </div>

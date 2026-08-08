@@ -1,4 +1,10 @@
 import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { usersApi } from '@/lib/api/users'
+import { asignacionesApi } from '@/lib/api/asignaciones'
+import { mesasApi } from '@/lib/api/mesas'
+import type { Role, UserSummary } from '@/lib/api/types'
+import { handleServerError } from '@/lib/handle-server-error'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { ThemeSwitch } from '@/components/theme-switch'
@@ -7,6 +13,7 @@ import { LiveStatusBadge } from '@/components/live-status-badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
   TableBody,
@@ -50,23 +57,6 @@ import { toast } from 'sonner'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useElectionStore } from '@/stores/election-store'
-
-interface UserItem {
-  id: string
-  name: string
-  username: string
-  telefono: string
-  role: 'ADMIN' | 'TRANSCRIPTOR' | 'AYUDANTE' | 'VISOR'
-  isActive: boolean
-}
-
-const initialUsers: UserItem[] = [
-  { id: '1', name: 'Yamile Hayes Michel', username: 'admin', telefono: '71234567', role: 'ADMIN', isActive: true },
-  { id: 'transcriptor', name: 'Juan Carlos Pérez', username: 'transcriptor', telefono: '76543210', role: 'TRANSCRIPTOR', isActive: true },
-  { id: 'transcriptor2', name: 'María Elena Torrez', username: 'transcriptor2', telefono: '68098765', role: 'TRANSCRIPTOR', isActive: true },
-  { id: '4', name: 'Patricia Visor', username: 'visor', telefono: '70011223', role: 'VISOR', isActive: true },
-]
 
 const userSchema = z.object({
   name: z.string().min(1, 'El nombre es obligatorio'),
@@ -77,38 +67,78 @@ const userSchema = z.object({
 })
 
 export function UsersFeature() {
-  const { asignaciones, ultimasMesas, actualizarAsignacionTranscriptor } = useElectionStore()
-  const [usersList, setUsersList] = useState<UserItem[]>(initialUsers)
+  const queryClient = useQueryClient()
   const [searchTerm, setSearchTerm] = useState('')
   const [roleTabFilter, setRoleTabFilter] = useState('TODOS')
   const [openModal, setOpenModal] = useState(false)
   const [openReportModal, setOpenReportModal] = useState(false)
-  const [editingUser, setEditingUser] = useState<UserItem | null>(null)
-  const [assigningUser, setAssigningUser] = useState<UserItem | null>(null)
+  const [editingUser, setEditingUser] = useState<UserSummary | null>(null)
+  const [assigningUser, setAssigningUser] = useState<UserSummary | null>(null)
   const [selectedMesasMap, setSelectedMesasMap] = useState<Record<string, boolean>>({})
+
+  const { data: usersList = [], isPending } = useQuery({
+    queryKey: ['users'],
+    queryFn: usersApi.list,
+  })
+  const { data: asignaciones = [] } = useQuery({
+    queryKey: ['asignaciones'],
+    queryFn: asignacionesApi.list,
+  })
+  const { data: mesas = [] } = useQuery({
+    queryKey: ['mesas'],
+    queryFn: () => mesasApi.list(),
+  })
 
   const form = useForm<z.infer<typeof userSchema>>({
     resolver: zodResolver(userSchema),
-    defaultValues: {
-      name: '',
-      username: '',
-      telefono: '',
-      role: 'TRANSCRIPTOR',
-      password: '',
+    defaultValues: { name: '', username: '', telefono: '', role: 'TRANSCRIPTOR', password: '' },
+  })
+
+  const invalidateUsers = () => queryClient.invalidateQueries({ queryKey: ['users'] })
+
+  const createMutation = useMutation({
+    mutationFn: usersApi.create,
+    onSuccess: () => {
+      invalidateUsers()
+      toast.success('Nuevo usuario registrado correctamente')
+      setOpenModal(false)
     },
+    onError: handleServerError,
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, ...payload }: { id: string } & Parameters<typeof usersApi.update>[1]) =>
+      usersApi.update(id, payload),
+    onSuccess: () => {
+      invalidateUsers()
+      toast.success('Usuario actualizado correctamente')
+      setOpenModal(false)
+    },
+    onError: handleServerError,
+  })
+
+  const assignMutation = useMutation({
+    mutationFn: ({ transcriptorId, mesaIds }: { transcriptorId: string; mesaIds: string[] }) =>
+      asignacionesApi.updateMesas(transcriptorId, mesaIds),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['asignaciones'] })
+      queryClient.invalidateQueries({ queryKey: ['mesas'] })
+      toast.success('Mesas asignadas correctamente')
+      setAssigningUser(null)
+      void variables
+    },
+    onError: handleServerError,
   })
 
   const filteredUsers = usersList.filter((u) => {
     const matchesSearch =
       u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       u.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.telefono.includes(searchTerm)
-
+      (u.telefono ?? '').includes(searchTerm)
     const matchesRole = roleTabFilter === 'TODOS' || u.role === roleTabFilter
     return matchesSearch && matchesRole
   })
 
-  // List of ONLY transcriptores for dedicated report
   const transcriptoresList = usersList.filter((u) => u.role === 'TRANSCRIPTOR')
 
   const handleOpenAdd = () => {
@@ -117,25 +147,22 @@ export function UsersFeature() {
     setOpenModal(true)
   }
 
-  const handleOpenEdit = (user: UserItem) => {
+  const handleOpenEdit = (user: UserSummary) => {
     setEditingUser(user)
     form.reset({ name: user.name, username: user.username, telefono: user.telefono || '', role: user.role, password: '' })
     setOpenModal(true)
   }
 
-  const handleToggleStatus = (id: string) => {
-    setUsersList((prev) =>
-      prev.map((u) => (u.id === id ? { ...u, isActive: !u.isActive } : u))
-    )
-    toast.success('Estado de usuario actualizado')
+  const handleToggleStatus = (user: UserSummary) => {
+    updateMutation.mutate({ id: user.id, isActive: !user.isActive })
   }
 
-  const handleOpenAssign = (user: UserItem) => {
+  const handleOpenAssign = (user: UserSummary) => {
     setAssigningUser(user)
     const asig = asignaciones.find((a) => a.transcriptorId === user.id)
     const map: Record<string, boolean> = {}
-    ultimasMesas.forEach((m) => {
-      map[m.codigo] = asig ? asig.mesasCodigos.includes(m.codigo) : false
+    mesas.forEach((m) => {
+      map[m.id] = asig ? asig.mesasCodigos.includes(m.codigo) : false
     })
     setSelectedMesasMap(map)
   }
@@ -143,40 +170,33 @@ export function UsersFeature() {
   const handleSaveUserAssignment = (e: React.FormEvent) => {
     e.preventDefault()
     if (!assigningUser) return
-
-    const nuevasMesas = Object.keys(selectedMesasMap).filter((cod) => selectedMesasMap[cod])
-    actualizarAsignacionTranscriptor(assigningUser.id, nuevasMesas)
-    toast.success(`Mesas asignadas correctamente a ${assigningUser.name}`)
-    setAssigningUser(null)
-  }
-
-  const handleOpenPrintPreview = () => {
-    setOpenReportModal(true)
+    const mesaIds = Object.keys(selectedMesasMap).filter((id) => selectedMesasMap[id])
+    assignMutation.mutate({ transcriptorId: assigningUser.id, mesaIds })
   }
 
   function onSubmit(values: z.infer<typeof userSchema>) {
     if (editingUser) {
-      setUsersList((prev) =>
-        prev.map((u) =>
-          u.id === editingUser.id
-            ? { ...u, name: values.name, username: values.username, telefono: values.telefono, role: values.role }
-            : u
-        )
-      )
-      toast.success('Usuario actualizado correctamente')
-    } else {
-      const newUser: UserItem = {
-        id: String(Date.now()),
+      updateMutation.mutate({
+        id: editingUser.id,
         name: values.name,
         username: values.username,
         telefono: values.telefono,
-        role: values.role,
-        isActive: true,
+        role: values.role as Role,
+        ...(values.password ? { password: values.password } : {}),
+      })
+    } else {
+      if (!values.password || values.password.length < 6) {
+        form.setError('password', { message: 'La contraseña debe tener al menos 6 caracteres' })
+        return
       }
-      setUsersList((prev) => [...prev, newUser])
-      toast.success('Nuevo usuario registrado correctamente')
+      createMutation.mutate({
+        name: values.name,
+        username: values.username,
+        telefono: values.telefono,
+        role: values.role as Role,
+        password: values.password,
+      })
     }
-    setOpenModal(false)
   }
 
   return (
@@ -204,7 +224,7 @@ export function UsersFeature() {
 
           <div className='flex items-center gap-2'>
             <Button
-              onClick={handleOpenPrintPreview}
+              onClick={() => setOpenReportModal(true)}
               variant='outline'
               className='font-semibold gap-2 text-xs border-primary/30 text-primary hover:bg-primary/5'
             >
@@ -230,11 +250,7 @@ export function UsersFeature() {
                 />
               </div>
 
-              <Tabs
-                value={roleTabFilter}
-                onValueChange={setRoleTabFilter}
-                className='w-full sm:w-auto'
-              >
+              <Tabs value={roleTabFilter} onValueChange={setRoleTabFilter} className='w-full sm:w-auto'>
                 <TabsList className='grid grid-cols-4 w-full sm:w-auto font-bold text-xs h-9'>
                   <TabsTrigger value='TODOS' className='text-xs'>Todos</TabsTrigger>
                   <TabsTrigger value='TRANSCRIPTOR' className='text-xs'>Transcriptores</TabsTrigger>
@@ -246,110 +262,109 @@ export function UsersFeature() {
           </CardHeader>
 
           <CardContent>
-            <div className='rounded-md border overflow-x-auto'>
-              <Table>
-                <TableHeader className='bg-muted/40'>
-                  <TableRow>
-                    <TableHead className='font-semibold text-xs py-3 w-[220px]'>Nombre Completo</TableHead>
-                    <TableHead className='font-semibold text-xs py-3 w-[130px]'>Usuario</TableHead>
-                    <TableHead className='font-semibold text-xs py-3 w-[130px]'>Teléfono Celular</TableHead>
-                    <TableHead className='font-semibold text-xs py-3 w-[130px]'>Rol Asignado</TableHead>
-                    <TableHead className='font-semibold text-xs py-3 w-[200px]'>Mesas Asignadas</TableHead>
-                    <TableHead className='font-semibold text-xs py-3 text-center w-[100px]'>Estado</TableHead>
-                    <TableHead className='font-semibold text-xs py-3 text-right w-[120px]'>Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUsers.map((u) => {
-                    const asig = asignaciones.find((a) => a.transcriptorId === u.id)
-                    const mesasCount = asig?.mesasCodigos.length || 0
+            {isPending ? (
+              <Skeleton className='h-64 w-full' />
+            ) : (
+              <div className='rounded-md border overflow-x-auto'>
+                <Table>
+                  <TableHeader className='bg-muted/40'>
+                    <TableRow>
+                      <TableHead className='font-semibold text-xs py-3 w-[220px]'>Nombre Completo</TableHead>
+                      <TableHead className='font-semibold text-xs py-3 w-[130px]'>Usuario</TableHead>
+                      <TableHead className='font-semibold text-xs py-3 w-[130px]'>Teléfono Celular</TableHead>
+                      <TableHead className='font-semibold text-xs py-3 w-[130px]'>Rol Asignado</TableHead>
+                      <TableHead className='font-semibold text-xs py-3 w-[200px]'>Mesas Asignadas</TableHead>
+                      <TableHead className='font-semibold text-xs py-3 text-center w-[100px]'>Estado</TableHead>
+                      <TableHead className='font-semibold text-xs py-3 text-right w-[120px]'>Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.map((u) => {
+                      const asig = asignaciones.find((a) => a.transcriptorId === u.id)
+                      const mesasCount = asig?.mesasCodigos.length || 0
 
-                    return (
-                      <TableRow key={u.id} className='hover:bg-muted/30'>
-                        <TableCell className='font-bold text-xs text-foreground py-3'>
-                          <div className='flex items-center gap-2'>
-                            <ShieldCheck className='h-4 w-4 text-primary shrink-0' />
-                            <span>{u.name}</span>
-                          </div>
-                        </TableCell>
-
-                        <TableCell className='text-xs text-muted-foreground font-mono py-3'>
-                          @{u.username}
-                        </TableCell>
-
-                        <TableCell className='text-xs font-semibold text-foreground py-3'>
-                          <div className='flex items-center gap-1.5'>
-                            <Phone className='h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0' />
-                            <span>+591 {u.telefono}</span>
-                          </div>
-                        </TableCell>
-
-                        <TableCell className='text-xs py-3'>
-                          <Badge
-                            variant='outline'
-                            className={`text-[10px] font-extrabold uppercase px-2 py-0.5 ${
-                              u.role === 'ADMIN'
-                                ? 'bg-primary/10 text-primary border-primary/30'
-                                : u.role === 'TRANSCRIPTOR'
-                                  ? 'bg-purple-500/10 text-purple-600 border-purple-500/30'
-                                  : 'bg-slate-500/10 text-slate-600 border-slate-500/30'
-                            }`}
-                          >
-                            {u.role}
-                          </Badge>
-                        </TableCell>
-
-                        <TableCell className='text-xs py-3'>
-                          {u.role === 'TRANSCRIPTOR' ? (
-                            <div className='flex items-center gap-1.5 flex-wrap'>
-                              {mesasCount > 0 ? (
-                                asig?.mesasCodigos.map((cod) => (
-                                  <Badge key={cod} variant='secondary' className='text-[10px] font-mono font-bold px-1.5 py-0'>
-                                    {cod}
-                                  </Badge>
-                                ))
-                              ) : (
-                                <span className='italic text-[11px] text-muted-foreground'>Sin mesas</span>
-                              )}
-                              <Button
-                                onClick={() => handleOpenAssign(u)}
-                                variant='ghost'
-                                size='sm'
-                                className='h-6 px-1.5 text-[10px] font-bold text-primary hover:bg-primary/10 ml-1'
-                              >
-                                <Settings2 className='h-3 w-3 mr-0.5' /> Asignar
-                              </Button>
+                      return (
+                        <TableRow key={u.id} className='hover:bg-muted/30'>
+                          <TableCell className='font-bold text-xs text-foreground py-3'>
+                            <div className='flex items-center gap-2'>
+                              <ShieldCheck className='h-4 w-4 text-primary shrink-0' />
+                              <span>{u.name}</span>
                             </div>
-                          ) : (
-                            <span className='text-muted-foreground text-[11px] font-medium'>
-                              {u.role === 'ADMIN' ? 'Acceso Global' : 'Solo Consulta'}
-                            </span>
-                          )}
-                        </TableCell>
+                          </TableCell>
 
-                        <TableCell className='text-center py-3'>
-                          <Switch
-                            checked={u.isActive}
-                            onCheckedChange={() => handleToggleStatus(u.id)}
-                          />
-                        </TableCell>
+                          <TableCell className='text-xs text-muted-foreground font-mono py-3'>@{u.username}</TableCell>
 
-                        <TableCell className='text-right py-3 space-x-1'>
-                          <Button
-                            variant='ghost'
-                            size='sm'
-                            onClick={() => handleOpenEdit(u)}
-                            className='h-8 w-8 p-0 text-muted-foreground hover:text-foreground'
-                          >
-                            <Edit className='h-4 w-4' />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+                          <TableCell className='text-xs font-semibold text-foreground py-3'>
+                            <div className='flex items-center gap-1.5'>
+                              <Phone className='h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0' />
+                              <span>+591 {u.telefono ?? '—'}</span>
+                            </div>
+                          </TableCell>
+
+                          <TableCell className='text-xs py-3'>
+                            <Badge
+                              variant='outline'
+                              className={`text-[10px] font-extrabold uppercase px-2 py-0.5 ${
+                                u.role === 'ADMIN'
+                                  ? 'bg-primary/10 text-primary border-primary/30'
+                                  : u.role === 'TRANSCRIPTOR'
+                                    ? 'bg-purple-500/10 text-purple-600 border-purple-500/30'
+                                    : 'bg-slate-500/10 text-slate-600 border-slate-500/30'
+                              }`}
+                            >
+                              {u.role}
+                            </Badge>
+                          </TableCell>
+
+                          <TableCell className='text-xs py-3'>
+                            {u.role === 'TRANSCRIPTOR' ? (
+                              <div className='flex items-center gap-1.5 flex-wrap'>
+                                {mesasCount > 0 ? (
+                                  asig?.mesasCodigos.map((cod) => (
+                                    <Badge key={cod} variant='secondary' className='text-[10px] font-mono font-bold px-1.5 py-0'>
+                                      {cod}
+                                    </Badge>
+                                  ))
+                                ) : (
+                                  <span className='italic text-[11px] text-muted-foreground'>Sin mesas</span>
+                                )}
+                                <Button
+                                  onClick={() => handleOpenAssign(u)}
+                                  variant='ghost'
+                                  size='sm'
+                                  className='h-6 px-1.5 text-[10px] font-bold text-primary hover:bg-primary/10 ml-1'
+                                >
+                                  <Settings2 className='h-3 w-3 mr-0.5' /> Asignar
+                                </Button>
+                              </div>
+                            ) : (
+                              <span className='text-muted-foreground text-[11px] font-medium'>
+                                {u.role === 'ADMIN' ? 'Acceso Global' : 'Solo Consulta'}
+                              </span>
+                            )}
+                          </TableCell>
+
+                          <TableCell className='text-center py-3'>
+                            <Switch checked={u.isActive} onCheckedChange={() => handleToggleStatus(u)} />
+                          </TableCell>
+
+                          <TableCell className='text-right py-3 space-x-1'>
+                            <Button
+                              variant='ghost'
+                              size='sm'
+                              onClick={() => handleOpenEdit(u)}
+                              className='h-8 w-8 p-0 text-muted-foreground hover:text-foreground'
+                            >
+                              <Edit className='h-4 w-4' />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
       </Main>
@@ -370,20 +385,17 @@ export function UsersFeature() {
 
             <form onSubmit={handleSaveUserAssignment} className='space-y-4 py-2'>
               <div className='space-y-2 max-h-60 overflow-y-auto pr-1'>
-                {ultimasMesas.map((m) => (
+                {mesas.map((m) => (
                   <label
-                    key={m.codigo}
+                    key={m.id}
                     className='flex items-center justify-between p-2.5 rounded-lg border bg-card hover:bg-muted/30 cursor-pointer'
                   >
                     <div className='flex items-center gap-2.5'>
                       <input
                         type='checkbox'
-                        checked={!!selectedMesasMap[m.codigo]}
+                        checked={!!selectedMesasMap[m.id]}
                         onChange={(e) =>
-                          setSelectedMesasMap((prev) => ({
-                            ...prev,
-                            [m.codigo]: e.target.checked,
-                          }))
+                          setSelectedMesasMap((prev) => ({ ...prev, [m.id]: e.target.checked }))
                         }
                         className='h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary'
                       />
@@ -404,7 +416,7 @@ export function UsersFeature() {
                 <Button type='button' variant='outline' onClick={() => setAssigningUser(null)} className='text-xs'>
                   Cancelar
                 </Button>
-                <Button type='submit' className='text-xs font-bold'>
+                <Button type='submit' disabled={assignMutation.isPending} className='text-xs font-bold'>
                   Guardar Asignación
                 </Button>
               </DialogFooter>
@@ -444,11 +456,18 @@ export function UsersFeature() {
             </div>
 
             <div className='space-y-1.5'>
+              <Label className='text-xs font-semibold'>
+                Contraseña {editingUser ? '(dejar en blanco para no cambiarla)' : '*'}
+              </Label>
+              <Input type='password' placeholder='••••••••' {...form.register('password')} className='text-xs' />
+              {form.formState.errors.password && (
+                <p className='text-[11px] text-destructive'>{form.formState.errors.password.message}</p>
+              )}
+            </div>
+
+            <div className='space-y-1.5'>
               <Label className='text-xs font-semibold'>Rol de Usuario *</Label>
-              <Select
-                value={form.watch('role')}
-                onValueChange={(val) => form.setValue('role', val as any)}
-              >
+              <Select value={form.watch('role')} onValueChange={(val) => form.setValue('role', val as Role)}>
                 <SelectTrigger className='text-xs'>
                   <SelectValue placeholder='Seleccione rol...' />
                 </SelectTrigger>
@@ -465,7 +484,7 @@ export function UsersFeature() {
               <Button type='button' variant='outline' onClick={() => setOpenModal(false)} className='text-xs'>
                 Cancelar
               </Button>
-              <Button type='submit' className='text-xs font-bold'>
+              <Button type='submit' disabled={createMutation.isPending || updateMutation.isPending} className='text-xs font-bold'>
                 Guardar Usuario
               </Button>
             </DialogFooter>
@@ -491,7 +510,6 @@ export function UsersFeature() {
             </DialogDescription>
           </DialogHeader>
 
-          {/* Visual On-Screen Modal Preview */}
           <div className='p-6 bg-card border rounded-lg space-y-4 text-xs shadow-xs'>
             <div className='border-b pb-3 text-center space-y-1'>
               <h2 className='text-sm font-black uppercase text-foreground'>
@@ -532,9 +550,7 @@ export function UsersFeature() {
                         <td className='p-2 border-r font-mono text-[11px]'>+591 {t.telefono}</td>
                         <td className='p-2 border-r font-bold text-xs'>{mesasCodigos}</td>
                         <td className='p-2 border-r text-center font-bold text-xs'>{totalMesas}</td>
-                        <td className='p-2 text-center font-bold text-[10px]'>
-                          {t.isActive ? 'ACTIVO' : 'INACTIVO'}
-                        </td>
+                        <td className='p-2 text-center font-bold text-[10px]'>{t.isActive ? 'ACTIVO' : 'INACTIVO'}</td>
                       </tr>
                     )
                   })}
@@ -551,7 +567,7 @@ export function UsersFeature() {
         </DialogContent>
       </Dialog>
 
-      {/* PRINTABLE AREA CONTAINER (Rendered at root level for flawless printing) */}
+      {/* PRINTABLE AREA CONTAINER */}
       <div id='printable-area' className='hidden print:block p-6 bg-white text-black font-sans space-y-4 text-xs'>
         <div className='border-b-2 border-black pb-3 text-center space-y-1'>
           <h2 className='text-sm font-black uppercase tracking-wider text-black'>

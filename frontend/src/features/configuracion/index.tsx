@@ -1,4 +1,9 @@
 import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { candidatosApi } from '@/lib/api/candidatos'
+import { mesasApi } from '@/lib/api/mesas'
+import { configuracionApi } from '@/lib/api/configuracion'
+import { handleServerError } from '@/lib/handle-server-error'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { ThemeSwitch } from '@/components/theme-switch'
@@ -7,6 +12,7 @@ import { LiveStatusBadge } from '@/components/live-status-badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
   TableBody,
@@ -28,14 +34,57 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Settings, PlusCircle, Award, Building, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { useElectionStore } from '@/stores/election-store'
 
 export function ConfiguracionFeature() {
-  const { candidatos, ultimasMesas, conteoAbierto, setConteoAbierto } = useElectionStore()
+  const queryClient = useQueryClient()
   const [openCandidatoModal, setOpenCandidatoModal] = useState(false)
   const [nombreCandidato, setNombreCandidato] = useState('')
   const [nombreLista, setNombreLista] = useState('')
   const [esPropio, setEsPropio] = useState(false)
+
+  const { data: candidatos = [], isPending: candidatosPending } = useQuery({
+    queryKey: ['candidatos', 'all'],
+    queryFn: () => candidatosApi.list(true),
+  })
+  const { data: mesas = [], isPending: mesasPending } = useQuery({
+    queryKey: ['mesas'],
+    queryFn: () => mesasApi.list(),
+  })
+  const { data: configuracion } = useQuery({
+    queryKey: ['configuracion'],
+    queryFn: configuracionApi.get,
+  })
+
+  const crearCandidatoMutation = useMutation({
+    mutationFn: candidatosApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['candidatos'] })
+      toast.success(`Candidato "${nombreCandidato}" registrado exitosamente`)
+      setOpenCandidatoModal(false)
+      setNombreCandidato('')
+      setNombreLista('')
+      setEsPropio(false)
+    },
+    onError: handleServerError,
+  })
+
+  const desactivarCandidatoMutation = useMutation({
+    mutationFn: candidatosApi.remove,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['candidatos'] })
+      toast.success('Candidato dado de baja de la boleta')
+    },
+    onError: handleServerError,
+  })
+
+  const toggleConteoMutation = useMutation({
+    mutationFn: configuracionApi.setConteoAbierto,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['configuracion'] })
+      toast.info(data.conteoAbierto ? 'Conteo de votos ABIERTO' : 'Conteo de votos CERRADO')
+    },
+    onError: handleServerError,
+  })
 
   const handleCrearCandidato = (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,17 +92,10 @@ export function ConfiguracionFeature() {
       toast.error('Complete todos los campos del candidato')
       return
     }
-    toast.success(`Candidato "${nombreCandidato}" registrado exitosamente`)
-    setOpenCandidatoModal(false)
-    setNombreCandidato('')
-    setNombreLista('')
-    setEsPropio(false)
+    crearCandidatoMutation.mutate({ nombre: nombreCandidato, lista: nombreLista, esPropio })
   }
 
-  const handleToggleConteo = (valor: boolean) => {
-    setConteoAbierto(valor)
-    toast.info(valor ? 'Conteo de votos ABIERTO' : 'Conteo de votos CERRADO')
-  }
+  const conteoAbierto = configuracion?.conteoAbierto ?? true
 
   return (
     <>
@@ -74,13 +116,17 @@ export function ConfiguracionFeature() {
           <div>
             <h2 className='text-2xl font-bold tracking-tight'>Configuración del Proceso Electoral</h2>
             <p className='text-xs text-muted-foreground mt-0.5'>
-              Parametrización inicial de candidatos, cargos y mesas antes del día de la votación en producción.
+              Parametrización de candidatos, cargos y mesas del proceso electoral.
             </p>
           </div>
           <div className='flex items-center gap-3 bg-card p-2 rounded-lg border shadow-sm'>
             <Label className='text-xs font-bold text-foreground'>Estado Global del Conteo:</Label>
             <div className='flex items-center gap-2'>
-              <Switch checked={conteoAbierto} onCheckedChange={handleToggleConteo} />
+              <Switch
+                checked={conteoAbierto}
+                disabled={toggleConteoMutation.isPending}
+                onCheckedChange={(val) => toggleConteoMutation.mutate(val)}
+              />
               <Badge className={conteoAbierto ? 'bg-emerald-600 text-white' : 'bg-muted-foreground text-white'}>
                 {conteoAbierto ? 'ABIERTO' : 'CERRADO'}
               </Badge>
@@ -106,38 +152,57 @@ export function ConfiguracionFeature() {
               </Button>
             </CardHeader>
             <CardContent>
-              <div className='rounded-md border overflow-hidden'>
-                <Table>
-                  <TableHeader className='bg-muted/40'>
-                    <TableRow>
-                      <TableHead className='font-semibold text-xs'>Candidato</TableHead>
-                      <TableHead className='font-semibold text-xs'>Lista</TableHead>
-                      <TableHead className='font-semibold text-xs text-center'>Propio</TableHead>
-                      <TableHead className='font-semibold text-xs text-right'>Acción</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {candidatos.map((c) => (
-                      <TableRow key={c.id}>
-                        <TableCell className='font-bold text-xs'>{c.nombre}</TableCell>
-                        <TableCell className='text-xs text-muted-foreground'>{c.lista}</TableCell>
-                        <TableCell className='text-center'>
-                          {c.esPropio ? (
-                            <Badge className='bg-primary text-primary-foreground text-[10px]'>Sí</Badge>
-                          ) : (
-                            <Badge variant='outline' className='text-[10px] text-muted-foreground'>No</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className='text-right'>
-                          <Button variant='ghost' size='sm' className='h-7 w-7 p-0 text-destructive'>
-                            <Trash2 className='h-3.5 w-3.5' />
-                          </Button>
-                        </TableCell>
+              {candidatosPending ? (
+                <Skeleton className='h-48 w-full' />
+              ) : (
+                <div className='rounded-md border overflow-hidden'>
+                  <Table>
+                    <TableHeader className='bg-muted/40'>
+                      <TableRow>
+                        <TableHead className='font-semibold text-xs'>Candidato</TableHead>
+                        <TableHead className='font-semibold text-xs'>Lista</TableHead>
+                        <TableHead className='font-semibold text-xs text-center'>Propio</TableHead>
+                        <TableHead className='font-semibold text-xs text-center'>Estado</TableHead>
+                        <TableHead className='font-semibold text-xs text-right'>Acción</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {candidatos.map((c) => (
+                        <TableRow key={c.id}>
+                          <TableCell className='font-bold text-xs'>{c.nombre}</TableCell>
+                          <TableCell className='text-xs text-muted-foreground'>{c.lista}</TableCell>
+                          <TableCell className='text-center'>
+                            {c.esPropio ? (
+                              <Badge className='bg-primary text-primary-foreground text-[10px]'>Sí</Badge>
+                            ) : (
+                              <Badge variant='outline' className='text-[10px] text-muted-foreground'>No</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className='text-center'>
+                            {c.isActive ? (
+                              <Badge variant='outline' className='text-[10px] text-emerald-600 border-emerald-500/30'>Activo</Badge>
+                            ) : (
+                              <Badge variant='outline' className='text-[10px] text-muted-foreground'>Baja</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className='text-right'>
+                            {c.isActive && (
+                              <Button
+                                variant='ghost'
+                                size='sm'
+                                onClick={() => desactivarCandidatoMutation.mutate(c.id)}
+                                className='h-7 w-7 p-0 text-destructive'
+                              >
+                                <Trash2 className='h-3.5 w-3.5' />
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -153,35 +218,36 @@ export function ConfiguracionFeature() {
                   Catálogo de mesas habilitadas por facultad.
                 </CardDescription>
               </div>
-              <Button size='sm' variant='outline' onClick={() => toast.info('Agregar mesa habilitado')} className='text-xs gap-1.5'>
-                <PlusCircle className='h-3.5 w-3.5' /> Nueva Mesa
-              </Button>
             </CardHeader>
             <CardContent>
-              <div className='rounded-md border overflow-hidden'>
-                <Table>
-                  <TableHeader className='bg-muted/40'>
-                    <TableRow>
-                      <TableHead className='font-semibold text-xs'>Mesa</TableHead>
-                      <TableHead className='font-semibold text-xs'>Facultad</TableHead>
-                      <TableHead className='font-semibold text-xs text-right'>Estado</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {ultimasMesas.map((m) => (
-                      <TableRow key={m.id}>
-                        <TableCell className='font-bold text-xs'>{m.codigo}</TableCell>
-                        <TableCell className='text-xs text-muted-foreground'>{m.facultad}</TableCell>
-                        <TableCell className='text-right'>
-                          <Badge variant='outline' className='text-[10px] font-bold uppercase'>
-                            {m.estado}
-                          </Badge>
-                        </TableCell>
+              {mesasPending ? (
+                <Skeleton className='h-48 w-full' />
+              ) : (
+                <div className='rounded-md border overflow-hidden max-h-96 overflow-y-auto'>
+                  <Table>
+                    <TableHeader className='bg-muted/40'>
+                      <TableRow>
+                        <TableHead className='font-semibold text-xs'>Mesa</TableHead>
+                        <TableHead className='font-semibold text-xs'>Facultad</TableHead>
+                        <TableHead className='font-semibold text-xs text-right'>Estado</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {mesas.map((m) => (
+                        <TableRow key={m.id}>
+                          <TableCell className='font-bold text-xs'>{m.codigo}</TableCell>
+                          <TableCell className='text-xs text-muted-foreground'>{m.facultad}</TableCell>
+                          <TableCell className='text-right'>
+                            <Badge variant='outline' className='text-[10px] font-bold uppercase'>
+                              {m.estado}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -222,7 +288,7 @@ export function ConfiguracionFeature() {
             </div>
 
             <div className='flex items-center justify-between pt-2 border-t'>
-              <Label className='text-xs font-semibold'>¿Es candidatura propia (Yamile Hayes Michel)?</Label>
+              <Label className='text-xs font-semibold'>¿Es candidatura propia?</Label>
               <Switch checked={esPropio} onCheckedChange={setEsPropio} />
             </div>
 
@@ -230,7 +296,7 @@ export function ConfiguracionFeature() {
               <Button type='button' variant='outline' onClick={() => setOpenCandidatoModal(false)} className='text-xs'>
                 Cancelar
               </Button>
-              <Button type='submit' className='text-xs font-bold'>
+              <Button type='submit' disabled={crearCandidatoMutation.isPending} className='text-xs font-bold'>
                 Guardar Candidato
               </Button>
             </DialogFooter>

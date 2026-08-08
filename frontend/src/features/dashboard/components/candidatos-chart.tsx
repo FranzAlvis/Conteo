@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useElectionStore } from '@/stores/election-store'
+import type { CandidatoResultado } from '@/lib/api/types'
 import {
   ResponsiveContainer,
   BarChart,
@@ -26,11 +26,20 @@ const PIE_COLORS = [
 ]
 
 interface CandidatosChartProps {
+  candidatos: CandidatoResultado[]
+  totalVotosPonderados: number
+  totalVotosEstudiantiles: number
+  totalVotosDocentes: number
   activeSector?: 'ponderado' | 'estudiantil' | 'docente'
 }
 
-export function CandidatosChart({ activeSector = 'ponderado' }: CandidatosChartProps) {
-  const { candidatos, totalVotosPonderados, totalVotosEstudiantiles, totalVotosDocentes } = useElectionStore()
+export function CandidatosChart({
+  candidatos,
+  totalVotosPonderados,
+  totalVotosEstudiantiles,
+  totalVotosDocentes,
+  activeSector = 'ponderado',
+}: CandidatosChartProps) {
   const [chartType, setChartType] = useState<'bar' | 'pie'>('bar')
 
   const totalSectorVotos =
@@ -67,14 +76,23 @@ export function CandidatosChart({ activeSector = 'ponderado' }: CandidatosChartP
   })
 
   // Custom Pie Label to render percentage directly on the chart sectors
+  interface PieLabelProps {
+    cx?: number
+    cy?: number
+    midAngle?: number
+    innerRadius?: number
+    outerRadius?: number
+    percent?: number
+  }
+
   const renderCustomizedPieLabel = ({
-    cx,
-    cy,
-    midAngle,
-    innerRadius,
-    outerRadius,
-    percent,
-  }: any) => {
+    cx = 0,
+    cy = 0,
+    midAngle = 0,
+    innerRadius = 0,
+    outerRadius = 0,
+    percent = 0,
+  }: PieLabelProps) => {
     if (percent === 0) return null
     const RADIAN = Math.PI / 180
     const radius = innerRadius + (outerRadius - innerRadius) * 0.55

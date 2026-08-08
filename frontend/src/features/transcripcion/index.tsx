@@ -1,4 +1,10 @@
 import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { mesasApi } from '@/lib/api/mesas'
+import { candidatosApi } from '@/lib/api/candidatos'
+import { actasApi } from '@/lib/api/actas'
+import type { Mesa } from '@/lib/api/types'
+import { handleServerError } from '@/lib/handle-server-error'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { ThemeSwitch } from '@/components/theme-switch'
@@ -7,6 +13,7 @@ import { LiveStatusBadge } from '@/components/live-status-badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Dialog,
   DialogContent,
@@ -35,50 +42,71 @@ import {
   UserCheck,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { useElectionStore, MesaReciente } from '@/stores/election-store'
 import { useAuthStore } from '@/stores/auth-store'
+import { getUserRole } from '@/lib/auth-role'
 
 export function TranscripcionFeature() {
-  const { ultimasMesas, candidatos, guardarOEditarMesa } = useElectionStore()
+  const queryClient = useQueryClient()
   const { auth } = useAuthStore()
+  const currentUser = auth.user
 
-  const currentUser = auth.user || {
-    id: 'transcriptor',
-    name: 'Juan Carlos Pérez',
-    role: 'TRANSCRIPTOR',
-  }
+  const isAdmin = getUserRole(currentUser) === 'ADMIN'
 
-  const userRole = Array.isArray(currentUser.role) ? currentUser.role[0] : currentUser.role
-  const isAdmin = userRole === 'ADMIN'
+  const { data: mesas = [], isPending: mesasPending } = useQuery({
+    queryKey: ['mesas'],
+    queryFn: () => mesasApi.list(),
+  })
+  const { data: candidatos = [] } = useQuery({
+    queryKey: ['candidatos'],
+    queryFn: () => candidatosApi.list(),
+  })
 
-  // Filter tables assigned strictly to this transcriptor (or all tables if Admin)
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedMesa, setSelectedMesa] = useState<MesaReciente | null>(null)
+  const [selectedMesa, setSelectedMesa] = useState<Mesa | null>(null)
   const [openDialog, setOpenDialog] = useState(false)
   const [votosInputMap, setVotosInputMap] = useState<Record<string, number>>({})
   const [observacionesInput, setObservacionesInput] = useState('')
   const [actaPreview, setActaPreview] = useState<string>('')
+  const [actaFile, setActaFile] = useState<File | null>(null)
 
-  const mesasAsignadas = ultimasMesas.filter((m) => {
+  const transcribirMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedMesa) throw new Error('No hay mesa seleccionada')
+      let actaFotoUrl: string | undefined
+      if (actaFile) actaFotoUrl = await actasApi.upload(actaFile)
+      return mesasApi.transcribir(selectedMesa.id, {
+        votos: Object.entries(votosInputMap).map(([candidatoId, cantidad]) => ({ candidatoId, cantidad })),
+        actaFotoUrl,
+        observaciones: observacionesInput || undefined,
+      })
+    },
+    onSuccess: (mesa) => {
+      queryClient.invalidateQueries({ queryKey: ['mesas'] })
+      queryClient.invalidateQueries({ queryKey: ['facultades'] })
+      queryClient.invalidateQueries({ queryKey: ['resultados'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      toast.success(`Acta de ${mesa.codigo} guardada y transmitida en tiempo real`)
+      setOpenDialog(false)
+      setActaFile(null)
+    },
+    onError: handleServerError,
+  })
+
+  const mesasAsignadas = mesas.filter((m) => {
     const matchesSearch =
       m.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       m.facultad.toLowerCase().includes(searchTerm.toLowerCase())
     if (!matchesSearch) return false
-
     if (isAdmin) return true
-    return (
-      m.transcriptorId === currentUser.id ||
-      m.transcriptor.toLowerCase().includes(currentUser.name?.toLowerCase() || '') ||
-      currentUser.username === 'transcriptor'
-    )
+    return m.transcriptorId === currentUser?.id
   })
 
-  const handleOpenTranscripcion = (mesa: MesaReciente) => {
+  const handleOpenTranscripcion = (mesa: Mesa) => {
     setSelectedMesa(mesa)
     setObservacionesInput(mesa.observaciones || '')
     setActaPreview(mesa.actaFotoUrl || '')
+    setActaFile(null)
 
-    // Pre-populate input map if already has votes
     const initialVotes: Record<string, number> = {}
     candidatos.forEach((c) => {
       initialVotes[c.id] = mesa.votosPorCandidato?.[c.id] || 0
@@ -89,15 +117,13 @@ export function TranscripcionFeature() {
 
   const handleVoteChange = (candidatoId: string, valStr: string) => {
     const val = parseInt(valStr, 10)
-    setVotosInputMap((prev) => ({
-      ...prev,
-      [candidatoId]: isNaN(val) ? 0 : Math.max(0, val),
-    }))
+    setVotosInputMap((prev) => ({ ...prev, [candidatoId]: isNaN(val) ? 0 : Math.max(0, val) }))
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    setActaFile(file)
     const reader = new FileReader()
     reader.onload = (evt) => {
       setActaPreview(evt.target?.result as string)
@@ -109,10 +135,7 @@ export function TranscripcionFeature() {
   const handleGuardar = (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedMesa) return
-
-    guardarOEditarMesa(selectedMesa.id, votosInputMap, actaPreview, observacionesInput)
-    toast.success(`Acta de ${selectedMesa.codigo} guardada y transmitida en tiempo real`)
-    setOpenDialog(false)
+    transcribirMutation.mutate()
   }
 
   return (
@@ -148,7 +171,7 @@ export function TranscripcionFeature() {
                   </span>
                 ) : (
                   <span className='flex items-center gap-1'>
-                    <UserCheck className='h-3 w-3' /> Modo Transcriptor ({currentUser.name})
+                    <UserCheck className='h-3 w-3' /> Modo Transcriptor ({currentUser?.name})
                   </span>
                 )}
               </Badge>
@@ -171,8 +194,13 @@ export function TranscripcionFeature() {
           </div>
         </div>
 
-        {/* Mesas Cards Grid */}
-        {mesasAsignadas.length > 0 ? (
+        {mesasPending ? (
+          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5'>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className='h-56 w-full' />
+            ))}
+          </div>
+        ) : mesasAsignadas.length > 0 ? (
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5'>
             {mesasAsignadas.map((m) => {
               const isDocente = m.tipo === 'DOCENTE'
@@ -204,12 +232,11 @@ export function TranscripcionFeature() {
                     </div>
                     <CardTitle className='text-base font-bold pt-2'>{m.facultad}</CardTitle>
                     <CardDescription className='text-xs'>
-                      Transcriptor Encargado: <strong className='text-foreground'>{m.transcriptor}</strong>
+                      Transcriptor Encargado: <strong className='text-foreground'>{m.transcriptorNombre ?? 'Sin asignar'}</strong>
                     </CardDescription>
                   </CardHeader>
 
                   <CardContent className='space-y-4 text-xs'>
-                    {/* Delegate WhatsApp Contact Card */}
                     {m.delegadoNombre && (
                       <div className='p-2.5 rounded-lg bg-muted/40 border border-border/50 flex items-center justify-between'>
                         <div>
@@ -290,9 +317,7 @@ export function TranscripcionFeature() {
                   Transcripción de {selectedMesa.codigo}
                 </DialogTitle>
                 {selectedMesa.tipo === 'DOCENTE' && (
-                  <Badge className='bg-purple-600 text-white font-bold text-[10px]'>
-                    Docentes (x45)
-                  </Badge>
+                  <Badge className='bg-purple-600 text-white font-bold text-[10px]'>Docentes (x45)</Badge>
                 )}
               </div>
               <DialogDescription className='text-xs'>
@@ -301,7 +326,6 @@ export function TranscripcionFeature() {
             </DialogHeader>
 
             <form onSubmit={handleGuardar} className='space-y-5 py-2'>
-              {/* Votes Input Table */}
               <div className='space-y-3 bg-muted/20 p-3.5 rounded-xl border border-border/60'>
                 <p className='text-xs font-bold uppercase tracking-wider text-muted-foreground'>
                   Votos Registrados por Candidato
@@ -328,7 +352,6 @@ export function TranscripcionFeature() {
                 ))}
               </div>
 
-              {/* Upload Act Photo */}
               <div className='space-y-2'>
                 <Label className='text-xs font-semibold'>Foto de Acta de Escrutinio</Label>
                 <div className='flex items-center gap-3'>
@@ -341,13 +364,7 @@ export function TranscripcionFeature() {
                   >
                     <Upload className='h-3.5 w-3.5 text-primary' /> Adjuntar Foto de Acta
                   </Button>
-                  <input
-                    id='actaInputFile'
-                    type='file'
-                    accept='image/*'
-                    onChange={handleFileChange}
-                    className='hidden'
-                  />
+                  <input id='actaInputFile' type='file' accept='image/*' onChange={handleFileChange} className='hidden' />
                   {actaPreview && (
                     <span className='text-[11px] font-bold text-emerald-600 flex items-center gap-1'>
                       <CheckCircle2 className='h-3.5 w-3.5' /> Imagen Cargada
@@ -362,7 +379,6 @@ export function TranscripcionFeature() {
                 )}
               </div>
 
-              {/* Observaciones */}
               <div className='space-y-1.5'>
                 <Label className='text-xs font-semibold'>Observaciones del Transcriptor</Label>
                 <Textarea
@@ -377,7 +393,7 @@ export function TranscripcionFeature() {
                 <Button type='button' variant='outline' onClick={() => setOpenDialog(false)} className='text-xs'>
                   Cancelar
                 </Button>
-                <Button type='submit' className='text-xs font-bold gap-1.5'>
+                <Button type='submit' disabled={transcribirMutation.isPending} className='text-xs font-bold gap-1.5'>
                   <CheckCircle2 className='h-4 w-4' /> Guardar y Publicar Cómputo
                 </Button>
               </DialogFooter>

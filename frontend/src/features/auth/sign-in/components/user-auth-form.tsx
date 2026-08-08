@@ -1,11 +1,17 @@
 import { useState } from 'react'
+import { AxiosError } from 'axios'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useNavigate } from '@tanstack/react-router'
+import { useMutation } from '@tanstack/react-query'
 import { Loader2, LogIn, Eye, EyeOff, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
+import { authApi } from '@/lib/api/auth'
+import type { ApiErrorBody } from '@/lib/api/types'
 import { useAuthStore } from '@/stores/auth-store'
+import { getUserRole } from '@/lib/auth-role'
+import { defaultRouteForRole } from '@/config/role-permissions'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -28,15 +34,27 @@ interface UserAuthFormProps extends React.HTMLAttributes<HTMLFormElement> {
   redirectTo?: string
 }
 
+function extractErrorMessage(error: unknown): string {
+  if (error instanceof AxiosError) {
+    const data = error.response?.data as ApiErrorBody | undefined
+    if (data?.message) {
+      return Array.isArray(data.message) ? data.message[0] : data.message
+    }
+    if (error.code === 'ERR_NETWORK') {
+      return 'No se pudo conectar con el servidor. Verifique que el backend esté corriendo.'
+    }
+  }
+  return 'Usuario o contraseña incorrectos.'
+}
+
 export function UserAuthForm({
   className,
   redirectTo,
   ...props
 }: UserAuthFormProps) {
-  const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  
+
   const navigate = useNavigate()
   const { auth } = useAuthStore()
 
@@ -48,72 +66,22 @@ export function UserAuthForm({
     },
   })
 
-  async function onSubmit(data: z.infer<typeof formSchema>) {
-    setIsLoading(true)
+  const loginMutation = useMutation({
+    mutationFn: authApi.login,
+    onSuccess: (result) => {
+      auth.setUser(result.user)
+      auth.setAccessToken(result.accessToken)
+      toast.success(`Bienvenido, ${result.user.name}`)
+      navigate({ to: redirectTo || defaultRouteForRole(getUserRole(result.user)), replace: true })
+    },
+    onError: (error) => {
+      setErrorMessage(extractErrorMessage(error))
+    },
+  })
+
+  function onSubmit(data: z.infer<typeof formSchema>) {
     setErrorMessage(null)
-
-    try {
-      // API call to backend auth endpoint (or mock login fallback)
-      const res = await fetch('http://localhost:3000/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      }).catch(() => null)
-
-      if (res && res.ok) {
-        const result = await res.json()
-        auth.setUser(result.user)
-        auth.setAccessToken(result.accessToken)
-        toast.success(`Bienvenido, ${result.user.name}`)
-        const targetPath = redirectTo || '/'
-        navigate({ to: targetPath, replace: true })
-      } else if (res && !res.ok) {
-        const err = await res.json().catch(() => ({ message: 'Credenciales inválidas' }))
-        setErrorMessage(err.message || 'Usuario o contraseña incorrectos.')
-      } else {
-        // Fallback testing credentials if backend server is starting
-        if (data.username === 'admin' && data.password === 'admin123') {
-          const mockUser = {
-            id: '1',
-            name: 'Administrador General',
-            username: 'admin',
-            role: 'ADMIN',
-          }
-          auth.setUser(mockUser)
-          auth.setAccessToken('jwt-mock-admin-token')
-          toast.success('Sesión iniciada como Administrador')
-          navigate({ to: redirectTo || '/', replace: true })
-        } else if (data.username === 'transcriptor' && data.password === 'trans123') {
-          const mockUser = {
-            id: '2',
-            name: 'Transcriptor de Mesa',
-            username: 'transcriptor',
-            role: 'TRANSCRIPTOR',
-          }
-          auth.setUser(mockUser)
-          auth.setAccessToken('jwt-mock-transcriptor-token')
-          toast.success('Sesión iniciada como Transcriptor')
-          navigate({ to: redirectTo || '/', replace: true })
-        } else if (data.username === 'visor' && data.password === 'visor123') {
-          const mockUser = {
-            id: '3',
-            name: 'Visor General',
-            username: 'visor',
-            role: 'VISOR',
-          }
-          auth.setUser(mockUser)
-          auth.setAccessToken('jwt-mock-visor-token')
-          toast.success('Sesión iniciada como Visor')
-          navigate({ to: redirectTo || '/', replace: true })
-        } else {
-          setErrorMessage('Credenciales incorrectas. Verifique su usuario y contraseña.')
-        }
-      }
-    } catch (error) {
-      setErrorMessage('Error al conectar con el servidor de autenticación.')
-    } finally {
-      setIsLoading(false)
-    }
+    loginMutation.mutate(data)
   }
 
   return (
@@ -181,8 +149,8 @@ export function UserAuthForm({
           )}
         />
 
-        <Button type='submit' className='w-full mt-2 font-semibold' disabled={isLoading}>
-          {isLoading ? (
+        <Button type='submit' className='w-full mt-2 font-semibold' disabled={loginMutation.isPending}>
+          {loginMutation.isPending ? (
             <Loader2 className='mr-2 h-4 w-4 animate-spin' />
           ) : (
             <LogIn className='mr-2 h-4 w-4' />

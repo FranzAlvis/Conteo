@@ -1,9 +1,10 @@
-import { useElectionStore } from '@/stores/election-store'
+import { useRealtimeStore } from '@/stores/realtime-store'
 import { Badge } from '@/components/ui/badge'
 import { Clock } from 'lucide-react'
 
 export function LiveStatusBadge() {
-  const { conteoAbierto, ultimaActualizacion } = useElectionStore()
+  const conteoAbierto = useRealtimeStore((s) => s.conteoAbierto)
+  const ultimaActualizacion = useRealtimeStore((s) => s.ultimaActualizacion)
 
   return (
     <div className='flex items-center gap-2.5 text-xs font-medium'>

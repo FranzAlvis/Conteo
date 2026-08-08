@@ -1,4 +1,7 @@
 import { useLayout } from '@/context/layout-provider'
+import { useAuthStore } from '@/stores/auth-store'
+import { getUserRole } from '@/lib/auth-role'
+import { canAccessRoute, type AppRoute } from '@/config/role-permissions'
 import {
   Sidebar,
   SidebarContent,
@@ -14,6 +17,15 @@ import { TeamSwitcher } from './team-switcher'
 
 export function AppSidebar() {
   const { collapsible, variant } = useLayout()
+  const role = useAuthStore((state) => getUserRole(state.auth.user))
+
+  const visibleGroups = sidebarData.navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => canAccessRoute(role, item.url as AppRoute)),
+    }))
+    .filter((group) => group.items.length > 0)
+
   return (
     <Sidebar collapsible={collapsible} variant={variant}>
       <SidebarHeader>
@@ -24,7 +36,7 @@ export function AppSidebar() {
         {/* <AppTitle /> */}
       </SidebarHeader>
       <SidebarContent>
-        {sidebarData.navGroups.map((props) => (
+        {visibleGroups.map((props) => (
           <NavGroup key={props.title} {...props} />
         ))}
       </SidebarContent>

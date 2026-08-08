@@ -1,4 +1,4 @@
-import { useElectionStore } from '@/stores/election-store'
+import type { Mesa } from '@/lib/api/types'
 import {
   Table,
   TableBody,
@@ -10,9 +10,11 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Clock, CheckCircle2, AlertCircle } from 'lucide-react'
 
-export function RecentMesasTable() {
-  const { ultimasMesas } = useElectionStore()
+interface RecentMesasTableProps {
+  mesas: Mesa[]
+}
 
+export function RecentMesasTable({ mesas }: RecentMesasTableProps) {
   return (
     <div className='rounded-md border border-border/60 overflow-hidden'>
       <Table>
@@ -21,12 +23,12 @@ export function RecentMesasTable() {
             <TableHead className='w-[100px] font-semibold text-xs'>Mesa</TableHead>
             <TableHead className='font-semibold text-xs'>Facultad</TableHead>
             <TableHead className='font-semibold text-xs'>Transcriptor</TableHead>
-            <TableHead className='font-semibold text-xs text-center'>Hora</TableHead>
+            <TableHead className='font-semibold text-xs text-center'>Última Act.</TableHead>
             <TableHead className='font-semibold text-xs text-right'>Estado</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {ultimasMesas.slice(0, 5).map((mesa) => (
+          {mesas.map((mesa) => (
             <TableRow key={mesa.id} className='hover:bg-muted/30 transition-colors'>
               <TableCell className='font-bold text-xs text-foreground'>
                 {mesa.codigo}
@@ -35,10 +37,10 @@ export function RecentMesasTable() {
                 {mesa.facultad}
               </TableCell>
               <TableCell className='text-xs text-foreground font-medium'>
-                {mesa.transcriptor}
+                {mesa.transcriptorNombre ?? 'Sin asignar'}
               </TableCell>
               <TableCell className='text-xs text-muted-foreground text-center font-mono'>
-                {mesa.hora}
+                {new Date(mesa.updatedAt).toLocaleTimeString()}
               </TableCell>
               <TableCell className='text-right'>
                 {mesa.estado === 'CARGADA' && (

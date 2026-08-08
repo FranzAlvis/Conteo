@@ -9,7 +9,7 @@ export interface AuthUser {
   name?: string
   username?: string
   email?: string
-  avatar?: string
+  avatar?: string | null
   accountNo?: string
   role?: string | string[]
   exp?: number
