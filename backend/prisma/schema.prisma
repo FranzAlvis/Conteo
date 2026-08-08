@@ -1,6 +1,6 @@
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -26,64 +26,94 @@ enum TipoMesa {
 }
 
 model User {
-  id           String     @id @default(uuid())
+  id           String   @id @default(uuid())
   name         String
-  username     String     @unique
+  username     String   @unique
   passwordHash String
-  role         Role       @default(VISOR)
-  isActive     Boolean    @default(true)
+  role         Role     @default(VISOR)
+  isActive     Boolean  @default(true)
   avatar       String?
   telefono     String?
-  createdAt    DateTime   @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  mesasAsignadas    Mesa[]     @relation("TranscriptorMesas")
+  mesasAsignadas     Mesa[]     @relation("TranscriptorMesas")
   delegadosAsignados Delegado[] @relation("TranscriptorDelegados")
-  actasSubidas      ActaMesa[]
+  actasSubidas       ActaMesa[]
+
+  @@map("users")
+}
+
+/// Catálogo de facultades / sedes de votación (mapa electoral)
+model Facultad {
+  id        String   @id @default(uuid())
+  nombre    String   @unique
+  keyword   String
+  createdAt DateTime @default(now())
+
+  mesas Mesa[]
+
+  @@map("facultades")
 }
 
 model Cargo {
-  id          String      @id @default(uuid())
+  id          String   @id @default(uuid())
   nombre      String
   descripcion String?
-  createdAt   DateTime    @default(now())
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
 
-  candidatos  Candidato[]
+  candidatos Candidato[]
+
+  @@map("cargos")
 }
 
 model Candidato {
-  id        String     @id @default(uuid())
+  id        String   @id @default(uuid())
   nombre    String
   lista     String
   cargoId   String
-  cargo     Cargo      @relation(fields: [cargoId], references: [id], onDelete: Cascade)
-  esPropio  Boolean    @default(false)
-  createdAt DateTime   @default(now())
+  cargo     Cargo    @relation(fields: [cargoId], references: [id], onDelete: Cascade)
+  esPropio  Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
 
-  votos     VotoMesa[]
+  votos VotoMesa[]
+
+  @@index([cargoId])
+  @@map("candidatos")
 }
 
 model Mesa {
-  id             String      @id @default(uuid())
-  codigo         String      @unique
-  facultad       String
-  ubicacion      String
-  totalPadron    Int
-  tipo           TipoMesa    @default(ESTUDIANTIL)
-  ponderacion    Int         @default(1)
-  estado         EstadoMesa  @default(PENDIENTE)
+  id             String     @id @default(uuid())
+  codigo         String     @unique
+  facultadId     String
+  facultad       Facultad   @relation(fields: [facultadId], references: [id])
+  ubicacion      String     @default("Por definir")
+  totalPadron    Int        @default(0)
+  tipo           TipoMesa   @default(ESTUDIANTIL)
+  ponderacion    Int        @default(1)
+  estado         EstadoMesa @default(PENDIENTE)
   transcriptorId String?
-  transcriptor   User?       @relation("TranscriptorMesas", fields: [transcriptorId], references: [id])
-  updatedAt      DateTime    @updatedAt
+  transcriptor   User?      @relation("TranscriptorMesas", fields: [transcriptorId], references: [id])
+  observaciones  String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 
-  votos          VotoMesa[]
-  actas          ActaMesa[]
-  delegados      Delegado[]
+  votos     VotoMesa[]
+  actas     ActaMesa[]
+  delegados Delegado[]
+
+  @@index([facultadId])
+  @@index([transcriptorId])
+  @@index([estado])
+  @@map("mesas")
 }
 
 model Delegado {
   id             String   @id @default(uuid())
   nombre         String
-  ci             String
+  ci             String   @unique
   celular        String
   correo         String?
   mesaId         String?
@@ -92,6 +122,11 @@ model Delegado {
   transcriptor   User?    @relation("TranscriptorDelegados", fields: [transcriptorId], references: [id])
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([mesaId])
+  @@index([transcriptorId])
+  @@map("delegados")
 }
 
 model VotoMesa {
@@ -103,6 +138,7 @@ model VotoMesa {
   cantidad    Int       @default(0)
 
   @@unique([mesaId, candidatoId])
+  @@map("votos_mesa")
 }
 
 model ActaMesa {
@@ -114,4 +150,16 @@ model ActaMesa {
   subidoPorId   String
   subidoPor     User     @relation(fields: [subidoPorId], references: [id])
   createdAt     DateTime @default(now())
+
+  @@index([mesaId])
+  @@map("actas_mesa")
+}
+
+/// Fila única de configuración global del proceso electoral
+model Configuracion {
+  id            Int      @id @default(1)
+  conteoAbierto Boolean  @default(true)
+  updatedAt     DateTime @updatedAt
+
+  @@map("configuracion")
 }

@@ -14,6 +14,9 @@ build/
 *.db
 *.db-journal
 
+# Archivos subidos en runtime (actas de mesa)
+backend/uploads/
+
 # Environment variables
 .env
 .env.local

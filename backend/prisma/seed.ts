@@ -1,24 +1,83 @@
-import { PrismaClient } from '@prisma/client'
-import * as bcrypt from 'bcrypt'
+import * as fs from 'fs';
+import * as path from 'path';
+import { parse } from 'csv-parse/sync';
+import { PrismaClient, TipoMesa } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient();
+
+const CSV_PATH = path.join(__dirname, 'data', 'mesas_facultades.csv');
+
+interface CsvMesaRow {
+  Mesa: string;
+  Facultad: string;
+  q_ejemplo: string;
+}
+
+interface MesaSeedInput {
+  numero: number;
+  codigo: string;
+  facultadNombre: string;
+  tipo: TipoMesa;
+}
+
+/**
+ * Lee prisma/data/mesas_facultades.csv (fuente oficial de mesas y facultades
+ * USFX 2026) y devuelve la lista de mesas a crear, en el orden del archivo.
+ * La columna "q_ejemplo" es un identificador de relleno del csv original,
+ * no un tamaño de padrón real, por lo que no se usa para totalPadron.
+ */
+function leerMesasDesdeCsv(): MesaSeedInput[] {
+  const raw = fs.readFileSync(CSV_PATH, 'utf-8');
+  const rows: CsvMesaRow[] = parse(raw, {
+    columns: true,
+    skip_empty_lines: true,
+    trim: true,
+  });
+
+  return rows.map((row) => {
+    const numero = Number(row.Mesa);
+    if (!Number.isInteger(numero) || numero <= 0) {
+      throw new Error(`Número de mesa inválido en CSV: "${row.Mesa}"`);
+    }
+    if (!row.Facultad) {
+      throw new Error(`Facultad vacía para la mesa ${row.Mesa} en CSV`);
+    }
+    return {
+      numero,
+      codigo: `MESA-${String(numero).padStart(2, '0')}`,
+      facultadNombre: row.Facultad.trim(),
+      tipo: 'ESTUDIANTIL' as TipoMesa,
+    };
+  });
+}
 
 async function main() {
-  console.log('🌱 Iniciando parametrización de base de datos (Seed)...')
+  console.log('🌱 Iniciando parametrización de base de datos (Seed)...');
 
-  // 1. Limpiar base de datos
-  await prisma.delegado.deleteMany()
-  await prisma.actaMesa.deleteMany()
-  await prisma.votoMesa.deleteMany()
-  await prisma.mesa.deleteMany()
-  await prisma.candidato.deleteMany()
-  await prisma.cargo.deleteMany()
-  await prisma.user.deleteMany()
+  // 1. Limpiar base de datos (orden respeta dependencias FK)
+  await prisma.delegado.deleteMany();
+  await prisma.actaMesa.deleteMany();
+  await prisma.votoMesa.deleteMany();
+  await prisma.mesa.deleteMany();
+  await prisma.facultad.deleteMany();
+  await prisma.candidato.deleteMany();
+  await prisma.cargo.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.configuracion.deleteMany();
 
-  // 2. Crear Usuarios por defecto
-  const passwordHashAdmin = await bcrypt.hash('admin123', 10)
-  const passwordHashTrans = await bcrypt.hash('trans123', 10)
-  const passwordHashVisor = await bcrypt.hash('visor123', 10)
+  // 2. Configuración global
+  await prisma.configuracion.create({
+    data: { id: 1, conteoAbierto: true },
+  });
+
+  // 3. Usuarios por defecto
+  const [passwordHashAdmin, passwordHashTrans, passwordHashVisor] =
+    await Promise.all([
+      bcrypt.hash('admin123', 10),
+      bcrypt.hash('trans123', 10),
+      bcrypt.hash('visor123', 10),
+    ]);
 
   const admin = await prisma.user.create({
     data: {
@@ -29,7 +88,7 @@ async function main() {
       telefono: '71234567',
       isActive: true,
     },
-  })
+  });
 
   const transcriptor1 = await prisma.user.create({
     data: {
@@ -40,7 +99,7 @@ async function main() {
       telefono: '76543210',
       isActive: true,
     },
-  })
+  });
 
   const transcriptor2 = await prisma.user.create({
     data: {
@@ -51,9 +110,9 @@ async function main() {
       telefono: '68098765',
       isActive: true,
     },
-  })
+  });
 
-  const visor = await prisma.user.create({
+  await prisma.user.create({
     data: {
       name: 'Observador Electoral',
       username: 'visor',
@@ -62,112 +121,138 @@ async function main() {
       telefono: '70011223',
       isActive: true,
     },
-  })
+  });
 
-  console.log('✅ Usuarios creados (admin, transcriptores, visor)')
+  console.log('✅ Usuarios creados (admin, transcriptores, visor)');
 
-  // 3. Crear Cargo
+  // 4. Cargo y candidatos
   const cargoVicerrector = await prisma.cargo.create({
     data: {
       nombre: 'Vicerrectorado 2026',
-      descripcion: 'Elecciones de autoridades universitarias 2026-2030 (USFX Sucre)',
+      descripcion:
+        'Elecciones de autoridades universitarias 2026-2030 (USFX Sucre)',
     },
-  })
+  });
 
-  // 4. Crear Candidatos
-  const yamile = await prisma.candidato.create({
-    data: {
-      nombre: 'Yamile Hayes Michel',
-      lista: 'Frente Unidad Universitaria (Lista 1)',
-      cargoId: cargoVicerrector.id,
-      esPropio: true,
-    },
-  })
+  const [yamile, villalpando, encinas, espada, blancos] = await Promise.all([
+    prisma.candidato.create({
+      data: {
+        nombre: 'Maria Yamile Hayes Michel',
+        lista: 'Postulante a Vicerrectorado 2026',
+        cargoId: cargoVicerrector.id,
+        esPropio: true,
+      },
+    }),
+    prisma.candidato.create({
+      data: {
+        nombre: 'Franz Armando Villalpando Amonzabel',
+        lista: 'Postulante a Vicerrectorado 2026',
+        cargoId: cargoVicerrector.id,
+        esPropio: false,
+      },
+    }),
+    prisma.candidato.create({
+      data: {
+        nombre: 'Guido Marcelo Encinas Pasquier',
+        lista: 'Postulante a Vicerrectorado 2026',
+        cargoId: cargoVicerrector.id,
+        esPropio: false,
+      },
+    }),
+    prisma.candidato.create({
+      data: {
+        nombre: 'Freddy David Espada Rivera',
+        lista: 'Postulante a Vicerrectorado 2026',
+        cargoId: cargoVicerrector.id,
+        esPropio: false,
+      },
+    }),
+    prisma.candidato.create({
+      data: {
+        nombre: 'Votos En Blanco / Nulos',
+        lista: 'N/A',
+        cargoId: cargoVicerrector.id,
+        esPropio: false,
+      },
+    }),
+  ]);
 
-  const mendoza = await prisma.candidato.create({
-    data: {
-      nombre: 'Dr. Roberto Mendoza',
-      lista: 'Frente Reformista Estudiantil (Lista 2)',
-      cargoId: cargoVicerrector.id,
-      esPropio: false,
-    },
-  })
+  console.log('✅ Candidatos parametrizados correctamente');
 
-  const soliz = await prisma.candidato.create({
-    data: {
-      nombre: 'Dra. Patricia Soliz',
-      lista: 'Movimiento Autonomía y Ciencia (Lista 3)',
-      cargoId: cargoVicerrector.id,
-      esPropio: false,
-    },
-  })
+  // 5. Facultades + Mesas (fuente: prisma/data/mesas_facultades.csv)
+  const mesasCsv = leerMesasDesdeCsv();
+  const nombresFacultades = [...new Set(mesasCsv.map((m) => m.facultadNombre))];
 
-  const blancos = await prisma.candidato.create({
-    data: {
-      nombre: 'Votos En Blanco / Nulos',
-      lista: 'N/A',
-      cargoId: cargoVicerrector.id,
-      esPropio: false,
-    },
-  })
+  // Mesa docente exclusiva no forma parte del csv de mesas estudiantiles.
+  const FACULTAD_DOCENTE = 'Mesa Docentes USFX (Exclusiva)';
+  nombresFacultades.push(FACULTAD_DOCENTE);
 
-  console.log('✅ Candidatos parametrizados correctamente')
+  const facultadesPorNombre = new Map<string, string>(); // nombre -> id
+  for (const nombre of nombresFacultades) {
+    const facultad = await prisma.facultad.create({
+      data: { nombre, keyword: nombre },
+    });
+    facultadesPorNombre.set(nombre, facultad.id);
+  }
 
-  // 5. Crear Mesas de votación (Estudiantiles ponderación 1, Docente ponderación 45)
-  const mesa1 = await prisma.mesa.create({
-    data: {
-      codigo: 'MESA-01',
-      facultad: 'Facultad de Medicina',
-      ubicacion: 'Aula Magna - Planta Baja',
-      totalPadron: 250,
-      tipo: 'ESTUDIANTIL',
-      ponderacion: 1,
-      estado: 'CARGADA',
-      transcriptorId: transcriptor1.id,
-    },
-  })
+  console.log(`✅ ${facultadesPorNombre.size} facultades/sedes registradas`);
 
-  const mesa2 = await prisma.mesa.create({
-    data: {
-      codigo: 'MESA-02',
-      facultad: 'Facultad de Derecho',
-      ubicacion: 'Bloque A - Aula 102',
-      totalPadron: 280,
-      tipo: 'ESTUDIANTIL',
-      ponderacion: 1,
-      estado: 'EN_CARGA',
-      transcriptorId: transcriptor1.id,
-    },
-  })
-
-  const mesa3 = await prisma.mesa.create({
-    data: {
-      codigo: 'MESA-03',
-      facultad: 'Facultad de Tecnología',
-      ubicacion: 'Laboratorio de Informática',
-      totalPadron: 300,
-      tipo: 'ESTUDIANTIL',
+  await prisma.mesa.createMany({
+    data: mesasCsv.map((m) => ({
+      codigo: m.codigo,
+      facultadId: facultadesPorNombre.get(m.facultadNombre)!,
+      tipo: m.tipo,
       ponderacion: 1,
       estado: 'PENDIENTE',
-      transcriptorId: transcriptor2.id,
-    },
-  })
+    })),
+  });
 
-  // MESA EXCLUSIVA DOCENTE (1 voto docente = 45 votos estudiantes)
   const mesaDocente = await prisma.mesa.create({
     data: {
       codigo: 'MESA-DOC-01',
-      facultad: 'Mesa Docentes USFX (Exclusiva)',
+      facultadId: facultadesPorNombre.get(FACULTAD_DOCENTE)!,
       ubicacion: 'Salón de Honor - Campus Central',
       totalPadron: 120,
       tipo: 'DOCENTE',
       ponderacion: 45,
-      estado: 'CARGADA',
-      transcriptorId: transcriptor2.id,
+      estado: 'PENDIENTE',
     },
-  })
+  });
 
-  // 6. Crear Delegados asignados por mesa y transcriptor
+  console.log(
+    `✅ ${mesasCsv.length} mesas estudiantiles + 1 mesa docente registradas`,
+  );
+
+  // 6. Ejemplo de flujo ya transcrito, en edición y pendiente para demo/QA
+  const mesa1 = await prisma.mesa.update({
+    where: { codigo: 'MESA-01' },
+    data: {
+      transcriptorId: transcriptor1.id,
+      estado: 'CARGADA',
+      totalPadron: 250,
+    },
+  });
+
+  await prisma.mesa.update({
+    where: { codigo: 'MESA-02' },
+    data: {
+      transcriptorId: transcriptor1.id,
+      estado: 'EN_CARGA',
+      totalPadron: 280,
+    },
+  });
+
+  await prisma.mesa.update({
+    where: { codigo: 'MESA-03' },
+    data: { transcriptorId: transcriptor2.id, totalPadron: 300 },
+  });
+
+  await prisma.mesa.update({
+    where: { id: mesaDocente.id },
+    data: { transcriptorId: transcriptor2.id, estado: 'CARGADA' },
+  });
+
+  // 7. Delegados de ejemplo
   await prisma.delegado.create({
     data: {
       nombre: 'Ana María Roca',
@@ -178,7 +263,7 @@ async function main() {
       transcriptorId: transcriptor1.id,
       isActive: true,
     },
-  })
+  });
 
   await prisma.delegado.create({
     data: {
@@ -186,11 +271,10 @@ async function main() {
       ci: '9210384 CH',
       celular: '68019283',
       correo: 'jorge.gutierrez@gmail.com',
-      mesaId: mesa2.id,
       transcriptorId: transcriptor1.id,
       isActive: true,
     },
-  })
+  });
 
   await prisma.delegado.create({
     data: {
@@ -202,38 +286,40 @@ async function main() {
       transcriptorId: transcriptor2.id,
       isActive: true,
     },
-  })
+  });
 
-  // 7. Registrar Votos Iniciales
-  // Mesa 1 Estudiantil (145 Yamile, 80 Mendoza, 15 Soliz, 5 Blancos)
+  // 8. Votos iniciales de las mesas ya cargadas
   await prisma.votoMesa.createMany({
     data: [
-      { mesaId: mesa1.id, candidatoId: yamile.id, cantidad: 145 },
-      { mesaId: mesa1.id, candidatoId: mendoza.id, cantidad: 80 },
-      { mesaId: mesa1.id, candidatoId: soliz.id, cantidad: 15 },
+      { mesaId: mesa1.id, candidatoId: yamile.id, cantidad: 130 },
+      { mesaId: mesa1.id, candidatoId: villalpando.id, cantidad: 70 },
+      { mesaId: mesa1.id, candidatoId: encinas.id, cantidad: 30 },
+      { mesaId: mesa1.id, candidatoId: espada.id, cantidad: 15 },
       { mesaId: mesa1.id, candidatoId: blancos.id, cantidad: 5 },
     ],
-  })
+  });
 
-  // Mesa Docente (30 Yamile, 15 Mendoza, 5 Soliz, 2 Blancos) -> 1 Voto = 45 Puntos
   await prisma.votoMesa.createMany({
     data: [
       { mesaId: mesaDocente.id, candidatoId: yamile.id, cantidad: 30 },
-      { mesaId: mesaDocente.id, candidatoId: mendoza.id, cantidad: 15 },
-      { mesaId: mesaDocente.id, candidatoId: soliz.id, cantidad: 5 },
+      { mesaId: mesaDocente.id, candidatoId: villalpando.id, cantidad: 15 },
+      { mesaId: mesaDocente.id, candidatoId: encinas.id, cantidad: 5 },
+      { mesaId: mesaDocente.id, candidatoId: espada.id, cantidad: 8 },
       { mesaId: mesaDocente.id, candidatoId: blancos.id, cantidad: 2 },
     ],
-  })
+  });
 
-  console.log('✅ Mesas (Estudiantiles y Docentes ponderadas) y Votos iniciales registrados')
-  console.log('🎉 Seed completado exitosamente.')
+  console.log('✅ Votos iniciales registrados en mesas de ejemplo');
+  console.log(
+    `🎉 Seed completado: ${mesasCsv.length + 1} mesas, ${facultadesPorNombre.size} facultades, admin=${admin.username}`,
+  );
 }
 
 main()
   .catch((e) => {
-    console.error(e)
-    process.exit(1)
+    console.error(e);
+    process.exit(1);
   })
   .finally(async () => {
-    await prisma.$disconnect()
-  })
+    await prisma.$disconnect();
+  });
