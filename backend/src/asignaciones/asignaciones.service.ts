@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { AuthenticatedUser } from '../common/types/authenticated-user';
 import { AsignacionResponseDto } from './dto/asignacion-response.dto';
 
 const TRANSCRIPTOR_INCLUDE = {
@@ -26,9 +27,17 @@ const TRANSCRIPTOR_INCLUDE = {
 export class AsignacionesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(): Promise<AsignacionResponseDto[]> {
+  /**
+   * ADMIN ve la lista completa de transcriptores. Cualquier otro rol
+   * (TRANSCRIPTOR, AYUDANTE) solo puede ver su propia fila: ni las mesas ni
+   * los celulares de delegados de otros transcriptores son asunto suyo.
+   */
+  async findAll(
+    currentUser: AuthenticatedUser,
+  ): Promise<AsignacionResponseDto[]> {
+    const isAdmin = currentUser.role === 'ADMIN';
     const transcriptores = await this.prisma.user.findMany({
-      where: { role: 'TRANSCRIPTOR' },
+      where: isAdmin ? { role: 'TRANSCRIPTOR' } : { id: currentUser.id },
       include: TRANSCRIPTOR_INCLUDE,
       orderBy: { name: 'asc' },
     });
