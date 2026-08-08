@@ -19,9 +19,15 @@
   --destructive: hsl(0 72% 45%);
   --destructive-foreground: hsl(0 0% 100%);
   --ring: hsl(350 65% 38%);
+  /* Paleta categórica para gráficos (candidatos): chart-1 = marca (propio),
+     2-5 validados contra fondo de card con scripts/validate_palette.js del
+     skill de dataviz (orden azul/naranja/aqua/violeta, ΔE CVD y de visión
+     normal por encima del piso en pares adyacentes). */
   --chart-1: hsl(350 65% 38%);
-  --chart-2: hsl(220 10% 45%);
-  --chart-3: hsl(220 15% 70%);
+  --chart-2: #2a78d6;
+  --chart-3: #eb6834;
+  --chart-4: #1baf7a;
+  --chart-5: #4a3aa7;
 
   --sidebar: var(--background);
   --sidebar-foreground: var(--foreground);
@@ -54,8 +60,10 @@
   --destructive-foreground: hsl(0 0% 100%);
   --ring: hsl(350 70% 52%);
   --chart-1: hsl(350 70% 52%);
-  --chart-2: hsl(220 10% 60%);
-  --chart-3: hsl(220 15% 30%);
+  --chart-2: #3987e5;
+  --chart-3: #d95926;
+  --chart-4: #199e70;
+  --chart-5: #9085e9;
 }
 
 @theme inline {
@@ -87,6 +95,8 @@
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
