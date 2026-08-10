@@ -7,6 +7,7 @@ import {
   Radio,
   FileSpreadsheet,
   Share2,
+  ClipboardCheck,
 } from 'lucide-react'
 import { type SidebarData } from '../types'
 
@@ -36,6 +37,11 @@ export const sidebarData: SidebarData = {
           title: 'Resultados Live',
           url: '/resultados',
           icon: Radio,
+        },
+        {
+          title: 'Estado de Mesas',
+          url: '/estado-mesas',
+          icon: ClipboardCheck,
         },
         {
           title: 'Transcripción de Actas',

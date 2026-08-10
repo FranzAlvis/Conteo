@@ -8,6 +8,7 @@ import type { Role } from '@/lib/api/types'
 export const APP_ROUTES = [
   '/',
   '/resultados',
+  '/estado-mesas',
   '/transcripcion',
   '/mesas',
   '/delegados',
@@ -23,7 +24,7 @@ export const ROLE_ROUTES: Record<Role, AppRoute[]> = {
   ADMIN: [...APP_ROUTES],
   TRANSCRIPTOR: ['/transcripcion', '/asignaciones'],
   AYUDANTE: ['/transcripcion', '/asignaciones'],
-  VISOR: ['/resultados'],
+  VISOR: ['/resultados', '/estado-mesas'],
 }
 
 /** Página a la que se redirige a cada rol al entrar a "/" o a una ruta sin permiso. */

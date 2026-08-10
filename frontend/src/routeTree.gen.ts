@@ -15,6 +15,7 @@ import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedTranscripcionRouteImport } from './routes/_authenticated/transcripcion'
 import { Route as AuthenticatedResultadosRouteImport } from './routes/_authenticated/resultados'
 import { Route as AuthenticatedMesasRouteImport } from './routes/_authenticated/mesas'
+import { Route as AuthenticatedEstadoMesasRouteImport } from './routes/_authenticated/estado-mesas'
 import { Route as AuthenticatedDelegadosRouteImport } from './routes/_authenticated/delegados'
 import { Route as AuthenticatedConfiguracionRouteImport } from './routes/_authenticated/configuracion'
 import { Route as AuthenticatedAsignacionesRouteImport } from './routes/_authenticated/asignaciones'
@@ -56,6 +57,12 @@ const AuthenticatedMesasRoute = AuthenticatedMesasRouteImport.update({
   path: '/mesas',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedEstadoMesasRoute =
+  AuthenticatedEstadoMesasRouteImport.update({
+    id: '/estado-mesas',
+    path: '/estado-mesas',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDelegadosRoute = AuthenticatedDelegadosRouteImport.update({
   id: '/delegados',
   path: '/delegados',
@@ -121,6 +128,7 @@ export interface FileRoutesByFullPath {
   '/asignaciones': typeof AuthenticatedAsignacionesRoute
   '/configuracion': typeof AuthenticatedConfiguracionRoute
   '/delegados': typeof AuthenticatedDelegadosRoute
+  '/estado-mesas': typeof AuthenticatedEstadoMesasRoute
   '/mesas': typeof AuthenticatedMesasRoute
   '/resultados': typeof AuthenticatedResultadosRoute
   '/transcripcion': typeof AuthenticatedTranscripcionRoute
@@ -137,6 +145,7 @@ export interface FileRoutesByTo {
   '/asignaciones': typeof AuthenticatedAsignacionesRoute
   '/configuracion': typeof AuthenticatedConfiguracionRoute
   '/delegados': typeof AuthenticatedDelegadosRoute
+  '/estado-mesas': typeof AuthenticatedEstadoMesasRoute
   '/mesas': typeof AuthenticatedMesasRoute
   '/resultados': typeof AuthenticatedResultadosRoute
   '/transcripcion': typeof AuthenticatedTranscripcionRoute
@@ -156,6 +165,7 @@ export interface FileRoutesById {
   '/_authenticated/asignaciones': typeof AuthenticatedAsignacionesRoute
   '/_authenticated/configuracion': typeof AuthenticatedConfiguracionRoute
   '/_authenticated/delegados': typeof AuthenticatedDelegadosRoute
+  '/_authenticated/estado-mesas': typeof AuthenticatedEstadoMesasRoute
   '/_authenticated/mesas': typeof AuthenticatedMesasRoute
   '/_authenticated/resultados': typeof AuthenticatedResultadosRoute
   '/_authenticated/transcripcion': typeof AuthenticatedTranscripcionRoute
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/asignaciones'
     | '/configuracion'
     | '/delegados'
+    | '/estado-mesas'
     | '/mesas'
     | '/resultados'
     | '/transcripcion'
@@ -192,6 +203,7 @@ export interface FileRouteTypes {
     | '/asignaciones'
     | '/configuracion'
     | '/delegados'
+    | '/estado-mesas'
     | '/mesas'
     | '/resultados'
     | '/transcripcion'
@@ -210,6 +222,7 @@ export interface FileRouteTypes {
     | '/_authenticated/asignaciones'
     | '/_authenticated/configuracion'
     | '/_authenticated/delegados'
+    | '/_authenticated/estado-mesas'
     | '/_authenticated/mesas'
     | '/_authenticated/resultados'
     | '/_authenticated/transcripcion'
@@ -270,6 +283,13 @@ declare module '@tanstack/react-router' {
       path: '/mesas'
       fullPath: '/mesas'
       preLoaderRoute: typeof AuthenticatedMesasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/estado-mesas': {
+      id: '/_authenticated/estado-mesas'
+      path: '/estado-mesas'
+      fullPath: '/estado-mesas'
+      preLoaderRoute: typeof AuthenticatedEstadoMesasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/delegados': {
@@ -349,6 +369,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAsignacionesRoute: typeof AuthenticatedAsignacionesRoute
   AuthenticatedConfiguracionRoute: typeof AuthenticatedConfiguracionRoute
   AuthenticatedDelegadosRoute: typeof AuthenticatedDelegadosRoute
+  AuthenticatedEstadoMesasRoute: typeof AuthenticatedEstadoMesasRoute
   AuthenticatedMesasRoute: typeof AuthenticatedMesasRoute
   AuthenticatedResultadosRoute: typeof AuthenticatedResultadosRoute
   AuthenticatedTranscripcionRoute: typeof AuthenticatedTranscripcionRoute
@@ -361,6 +382,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAsignacionesRoute: AuthenticatedAsignacionesRoute,
   AuthenticatedConfiguracionRoute: AuthenticatedConfiguracionRoute,
   AuthenticatedDelegadosRoute: AuthenticatedDelegadosRoute,
+  AuthenticatedEstadoMesasRoute: AuthenticatedEstadoMesasRoute,
   AuthenticatedMesasRoute: AuthenticatedMesasRoute,
   AuthenticatedResultadosRoute: AuthenticatedResultadosRoute,
   AuthenticatedTranscripcionRoute: AuthenticatedTranscripcionRoute,

@@ -51,6 +51,10 @@ export function useRealtimeSync() {
       setUltimaActualizacion(new Date(data.ultimaActualizacion).toLocaleTimeString())
       queryClient.invalidateQueries({ queryKey: ['resultados'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      // Llega a todos los roles conectados (incl. VISOR), a diferencia de
+      // 'mesaActualizada' que solo llega al room admin_transcriptor: es la
+      // señal que usa Estado de Mesas para refrescarse en vivo.
+      queryClient.invalidateQueries({ queryKey: ['mesas'] })
     })
 
     socket.on('conteoEstadoCambiado', (data: { abierto: boolean }) => {
