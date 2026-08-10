@@ -261,7 +261,6 @@ async function main() {
       celular: '71234567',
       correo: 'ana.roca@usfx.edu.bo',
       mesaId: mesa1.id,
-      transcriptorId: transcriptor1.id,
       isActive: true,
     },
   });
@@ -272,7 +271,6 @@ async function main() {
       ci: '9210384 CH',
       celular: '68019283',
       correo: 'jorge.gutierrez@gmail.com',
-      transcriptorId: transcriptor1.id,
       isActive: true,
     },
   });
@@ -284,7 +282,6 @@ async function main() {
       celular: '77889900',
       correo: 'f.arancibia@usfx.edu.bo',
       mesaId: mesaDocente.id,
-      transcriptorId: transcriptor2.id,
       isActive: true,
     },
   });

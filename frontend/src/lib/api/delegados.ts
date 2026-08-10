@@ -7,7 +7,6 @@ export interface CreateDelegadoPayload {
   celular: string
   correo?: string
   mesaId?: string
-  transcriptorId?: string
 }
 
 export interface UpdateDelegadoPayload {
@@ -16,7 +15,6 @@ export interface UpdateDelegadoPayload {
   celular?: string
   correo?: string
   mesaId?: string | null
-  transcriptorId?: string | null
   isActive?: boolean
 }
 

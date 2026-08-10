@@ -11,8 +11,13 @@ import { UpdateDelegadoDto } from './dto/update-delegado.dto';
 import { DelegadoResponseDto } from './dto/delegado-response.dto';
 
 const DELEGADO_INCLUDE = {
-  mesa: { select: { codigo: true } },
-  transcriptor: { select: { name: true } },
+  mesa: {
+    select: {
+      codigo: true,
+      transcriptorId: true,
+      transcriptor: { select: { name: true } },
+    },
+  },
 } satisfies Prisma.DelegadoInclude;
 
 type DelegadoConRelaciones = Prisma.DelegadoGetPayload<{
@@ -23,6 +28,11 @@ type DelegadoConRelaciones = Prisma.DelegadoGetPayload<{
 export class DelegadosService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * El transcriptor responsable de un delegado es quien transcribe su mesa
+   * (mesa.transcriptorId), no un dato asignado de forma independiente: así
+   * nunca se puede desincronizar de la asignación real de mesas.
+   */
   private toResponse(delegado: DelegadoConRelaciones): DelegadoResponseDto {
     return {
       id: delegado.id,
@@ -32,8 +42,8 @@ export class DelegadosService {
       correo: delegado.correo,
       mesaId: delegado.mesaId,
       mesaCodigo: delegado.mesa?.codigo ?? null,
-      transcriptorId: delegado.transcriptorId,
-      transcriptorNombre: delegado.transcriptor?.name ?? null,
+      transcriptorId: delegado.mesa?.transcriptorId ?? null,
+      transcriptorNombre: delegado.mesa?.transcriptor?.name ?? null,
       isActive: delegado.isActive,
       createdAt: delegado.createdAt,
     };
@@ -78,8 +88,6 @@ export class DelegadosService {
       );
 
     if (dto.mesaId) await this.assertMesaExiste(dto.mesaId);
-    if (dto.transcriptorId)
-      await this.assertTranscriptorExiste(dto.transcriptorId);
 
     const delegado = await this.prisma.delegado.create({
       data: {
@@ -88,7 +96,6 @@ export class DelegadosService {
         celular: dto.celular,
         correo: dto.correo,
         mesaId: dto.mesaId,
-        transcriptorId: dto.transcriptorId,
       },
       include: DELEGADO_INCLUDE,
     });
@@ -112,8 +119,6 @@ export class DelegadosService {
       }
     }
     if (dto.mesaId) await this.assertMesaExiste(dto.mesaId);
-    if (dto.transcriptorId)
-      await this.assertTranscriptorExiste(dto.transcriptorId);
 
     const delegado = await this.prisma.delegado.update({
       where: { id },
@@ -123,7 +128,6 @@ export class DelegadosService {
         celular: dto.celular,
         correo: dto.correo,
         mesaId: dto.mesaId,
-        transcriptorId: dto.transcriptorId,
         isActive: dto.isActive,
       },
       include: DELEGADO_INCLUDE,
@@ -139,13 +143,5 @@ export class DelegadosService {
   private async assertMesaExiste(mesaId: string) {
     const mesa = await this.prisma.mesa.findUnique({ where: { id: mesaId } });
     if (!mesa) throw new BadRequestException('La mesa indicada no existe');
-  }
-
-  private async assertTranscriptorExiste(transcriptorId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: transcriptorId },
-    });
-    if (!user)
-      throw new BadRequestException('El transcriptor indicado no existe');
   }
 }

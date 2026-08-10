@@ -7,19 +7,22 @@ import { PrismaService } from '../common/prisma/prisma.service';
 import { AuthenticatedUser } from '../common/types/authenticated-user';
 import { AsignacionResponseDto } from './dto/asignacion-response.dto';
 
+/**
+ * Los delegados de un transcriptor son los delegados de las mesas que tiene
+ * asignadas (mesa.delegados), no un vínculo independiente: así el grupo de
+ * WhatsApp siempre refleja la asignación real de mesas, sin poder
+ * desincronizarse de ella.
+ */
 const TRANSCRIPTOR_INCLUDE = {
   mesasAsignadas: {
-    select: { codigo: true },
-    orderBy: { codigo: 'asc' as const },
-  },
-  delegadosAsignados: {
     select: {
-      id: true,
-      nombre: true,
-      celular: true,
-      mesa: { select: { codigo: true } },
+      codigo: true,
+      delegados: {
+        select: { id: true, nombre: true, celular: true },
+        orderBy: { nombre: 'asc' as const },
+      },
     },
-    orderBy: { nombre: 'asc' as const },
+    orderBy: { codigo: 'asc' as const },
   },
 };
 
@@ -47,12 +50,14 @@ export class AsignacionesService {
       transcriptorNombre: t.name,
       transcriptorTelefono: t.telefono,
       mesasCodigos: t.mesasAsignadas.map((m) => m.codigo),
-      delegados: t.delegadosAsignados.map((d) => ({
-        id: d.id,
-        nombre: d.nombre,
-        celular: d.celular,
-        mesaCodigo: d.mesa?.codigo ?? null,
-      })),
+      delegados: t.mesasAsignadas.flatMap((m) =>
+        m.delegados.map((d) => ({
+          id: d.id,
+          nombre: d.nombre,
+          celular: d.celular,
+          mesaCodigo: m.codigo,
+        })),
+      ),
     }));
   }
 
@@ -109,12 +114,14 @@ export class AsignacionesService {
       transcriptorNombre: actualizado.name,
       transcriptorTelefono: actualizado.telefono,
       mesasCodigos: actualizado.mesasAsignadas.map((m) => m.codigo),
-      delegados: actualizado.delegadosAsignados.map((d) => ({
-        id: d.id,
-        nombre: d.nombre,
-        celular: d.celular,
-        mesaCodigo: d.mesa?.codigo ?? null,
-      })),
+      delegados: actualizado.mesasAsignadas.flatMap((m) =>
+        m.delegados.map((d) => ({
+          id: d.id,
+          nombre: d.nombre,
+          celular: d.celular,
+          mesaCodigo: m.codigo,
+        })),
+      ),
     };
   }
 }

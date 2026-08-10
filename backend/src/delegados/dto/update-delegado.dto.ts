@@ -28,11 +28,6 @@ export class UpdateDelegadoDto {
   @IsUUID('4', { message: 'Mesa inválida' })
   mesaId?: string | null;
 
-  /** Enviar null para desasignar el transcriptor. */
-  @IsOptional()
-  @IsUUID('4', { message: 'Transcriptor inválido' })
-  transcriptorId?: string | null;
-
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;

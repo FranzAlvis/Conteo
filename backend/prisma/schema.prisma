@@ -38,7 +38,6 @@ model User {
   updatedAt    DateTime @updatedAt
 
   mesasAsignadas     Mesa[]            @relation("TranscriptorMesas")
-  delegadosAsignados Delegado[]        @relation("TranscriptorDelegados")
   actasSubidas       ActaMesa[]
   reseteosEjecutados ResetAuditoria[]
 
@@ -111,22 +110,21 @@ model Mesa {
   @@map("mesas")
 }
 
+/// El transcriptor responsable de un delegado se deriva de mesa.transcriptorId
+/// (quien transcribe esa mesa), no se asigna de forma independiente.
 model Delegado {
-  id             String   @id @default(uuid())
-  nombre         String
-  ci             String   @unique
-  celular        String
-  correo         String?
-  mesaId         String?
-  mesa           Mesa?    @relation(fields: [mesaId], references: [id])
-  transcriptorId String?
-  transcriptor   User?    @relation("TranscriptorDelegados", fields: [transcriptorId], references: [id])
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id        String   @id @default(uuid())
+  nombre    String
+  ci        String   @unique
+  celular   String
+  correo    String?
+  mesaId    String?
+  mesa      Mesa?    @relation(fields: [mesaId], references: [id])
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([mesaId])
-  @@index([transcriptorId])
   @@map("delegados")
 }
 

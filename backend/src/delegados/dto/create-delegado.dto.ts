@@ -26,8 +26,4 @@ export class CreateDelegadoDto {
   @IsOptional()
   @IsUUID('4', { message: 'Mesa inválida' })
   mesaId?: string;
-
-  @IsOptional()
-  @IsUUID('4', { message: 'Transcriptor inválido' })
-  transcriptorId?: string;
 }
