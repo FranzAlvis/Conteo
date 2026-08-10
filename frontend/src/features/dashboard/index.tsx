@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Vote, Users, PieChart, Activity, ShieldAlert } from 'lucide-react'
+import { Vote, Users, Activity, ShieldAlert } from 'lucide-react'
 import { CandidatosChart } from './components/candidatos-chart'
 import { RecentMesasTable } from './components/recent-mesas-table'
 
@@ -23,11 +23,9 @@ export function Dashboard() {
   const mesasCargadas = data?.mesasCargadas ?? 0
   const totalMesas = data?.totalMesas ?? 0
   const totalVotos = data?.totalVotosPonderados ?? 0
-  const totalPadron = data?.totalPadron ?? 0
   const conteoAbierto = data?.conteoAbierto ?? true
 
   const porcentajeMesas = totalMesas > 0 ? Math.round((mesasCargadas / totalMesas) * 100) : 0
-  const porcentajeParticipacion = totalPadron > 0 ? ((totalVotos / totalPadron) * 100).toFixed(1) : '0'
 
   return (
     <>
@@ -77,7 +75,7 @@ export function Dashboard() {
         </div>
 
         {/* Stat Cards Row */}
-        <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
+        <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3'>
           {/* Card 1: Mesas Cargadas */}
           <Card className='border-border/60 shadow-sm hover:shadow-md transition-shadow'>
             <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
@@ -131,31 +129,7 @@ export function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Card 3: % Participación */}
-          <Card className='border-border/60 shadow-sm hover:shadow-md transition-shadow'>
-            <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-              <CardTitle className='text-xs font-semibold uppercase tracking-wider text-muted-foreground'>
-                Participación Padronal
-              </CardTitle>
-              <PieChart className='h-4 w-4 text-primary' />
-            </CardHeader>
-            <CardContent className='space-y-1'>
-              {isPending ? (
-                <Skeleton className='h-10 w-full' />
-              ) : (
-                <>
-                  <div className='text-2xl font-extrabold text-foreground'>
-                    {porcentajeParticipacion}%
-                  </div>
-                  <p className='text-xs text-muted-foreground pt-1'>
-                    {totalVotos.toLocaleString()} de {totalPadron.toLocaleString()} inscritos
-                  </p>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Card 4: Estado del Conteo */}
+          {/* Card 3: Estado del Conteo */}
           <Card className='border-border/60 shadow-sm hover:shadow-md transition-shadow'>
             <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
               <CardTitle className='text-xs font-semibold uppercase tracking-wider text-muted-foreground'>
