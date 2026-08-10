@@ -17,21 +17,27 @@ export class FacultadesService {
       include: { mesas: { select: { estado: true } } },
     });
 
-    return facultades.map((f) => {
-      const totalMesas = f.mesas.length;
-      const mesasCargadas = f.mesas.filter(
-        (m) => m.estado === 'CARGADA',
-      ).length;
-      return {
-        id: f.id,
-        nombre: f.nombre,
-        keyword: f.keyword,
-        totalMesas,
-        mesasCargadas,
-        porcentajeCompletado:
-          totalMesas > 0 ? Math.round((mesasCargadas / totalMesas) * 100) : 0,
-      };
-    });
+    return facultades
+      .map((f) => {
+        const totalMesas = f.mesas.length;
+        const mesasCargadas = f.mesas.filter(
+          (m) => m.estado === 'CARGADA',
+        ).length;
+        return {
+          id: f.id,
+          nombre: f.nombre,
+          keyword: f.keyword,
+          totalMesas,
+          mesasCargadas,
+          porcentajeCompletado:
+            totalMesas > 0
+              ? Math.round((mesasCargadas / totalMesas) * 100)
+              : 0,
+        };
+      })
+      .sort(
+        (a, b) => b.totalMesas - a.totalMesas || a.nombre.localeCompare(b.nombre),
+      );
   }
 
   async create(dto: CreateFacultadDto): Promise<FacultadResponseDto> {

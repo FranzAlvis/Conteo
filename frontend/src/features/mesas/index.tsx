@@ -697,50 +697,80 @@ export function MesasFeature() {
           </DialogHeader>
 
           <div className='grid grid-cols-1 md:grid-cols-2 gap-4 py-2'>
-            {mesasDeFacultadModal.map((m) => (
-              <div key={m.id} className='p-3.5 rounded-lg bg-card border border-border/60 space-y-3 shadow-xs'>
-                <div className='flex items-center justify-between border-b pb-2'>
-                  <Badge variant='outline' className='font-mono font-bold text-xs bg-primary/10 text-primary border-primary/30'>
-                    {m.codigo}
-                  </Badge>
-                  <Badge variant='outline' className='text-[10px] font-bold'>
-                    {m.tipo}
-                  </Badge>
-                </div>
+            {mesasDeFacultadModal.map((m) => {
+              const isCargada = m.estado === 'CARGADA'
+              const isEnCarga = m.estado === 'EN_CARGA'
 
-                <div className='text-xs space-y-1'>
-                  <p className='text-muted-foreground'>Transcriptor: <strong className='text-foreground'>{m.transcriptorNombre ?? 'Sin asignar'}</strong></p>
-                  <p className='text-muted-foreground'>Estado: <strong className='text-emerald-600 font-bold'>{m.estado}</strong></p>
-                </div>
+              return (
+                <div
+                  key={m.id}
+                  className={`p-3.5 rounded-lg border space-y-3 shadow-xs ${
+                    isCargada
+                      ? 'bg-emerald-500/5 border-emerald-500/40'
+                      : isEnCarga
+                        ? 'bg-amber-500/5 border-amber-500/40'
+                        : 'bg-muted/20 border-border/60'
+                  }`}
+                >
+                  <div className='flex items-center justify-between border-b pb-2'>
+                    <Badge variant='outline' className='font-mono font-bold text-xs bg-primary/10 text-primary border-primary/30'>
+                      {m.codigo}
+                    </Badge>
+                    <Badge
+                      variant='outline'
+                      className={`text-[10px] uppercase font-bold gap-1 ${
+                        isCargada
+                          ? 'bg-emerald-600 text-white border-emerald-600'
+                          : isEnCarga
+                            ? 'bg-amber-500 text-white border-amber-500 animate-pulse'
+                            : 'bg-slate-500/10 text-slate-500 border-slate-500/30'
+                      }`}
+                    >
+                      {isCargada ? (
+                        <CheckCircle2 className='h-3 w-3' />
+                      ) : isEnCarga ? (
+                        <Clock className='h-3 w-3' />
+                      ) : (
+                        <AlertCircle className='h-3 w-3' />
+                      )}
+                      {isCargada ? 'Cargada' : isEnCarga ? 'En Edición' : 'Pendiente'}
+                    </Badge>
+                  </div>
 
-                {m.delegadoNombre ? (
-                  <div className='p-2.5 rounded bg-muted/40 border flex items-center justify-between text-xs'>
-                    <div>
-                      <p className='text-[10px] font-bold uppercase text-muted-foreground'>Delegado de Mesa</p>
-                      <p className='font-bold text-foreground flex items-center gap-1'>
-                        <UserCheck className='h-3.5 w-3.5 text-primary' /> {m.delegadoNombre}
-                      </p>
+                  <div className='text-xs space-y-1'>
+                    <p className='text-muted-foreground'>Transcriptor: <strong className='text-foreground'>{m.transcriptorNombre ?? 'Sin asignar'}</strong></p>
+                    <p className='text-muted-foreground'>Tipo: <strong className='text-foreground'>{m.tipo}</strong></p>
+                  </div>
+
+                  {m.delegadoNombre ? (
+                    <div className='p-2.5 rounded bg-muted/40 border flex items-center justify-between text-xs'>
+                      <div>
+                        <p className='text-[10px] font-bold uppercase text-muted-foreground'>Delegado de Mesa</p>
+                        <p className='font-bold text-foreground flex items-center gap-1'>
+                          <UserCheck className='h-3.5 w-3.5 text-primary' /> {m.delegadoNombre}
+                        </p>
+                        {m.delegadoCelular && (
+                          <p className='text-[11px] font-mono text-muted-foreground'>+591 {m.delegadoCelular}</p>
+                        )}
+                      </div>
                       {m.delegadoCelular && (
-                        <p className='text-[11px] font-mono text-muted-foreground'>+591 {m.delegadoCelular}</p>
+                        <a
+                          href={`https://wa.me/591${m.delegadoCelular}`}
+                          target='_blank'
+                          rel='noopener noreferrer'
+                          className='p-1.5 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors'
+                          title='Chat de WhatsApp'
+                        >
+                          <MessageSquare className='h-4 w-4' />
+                        </a>
                       )}
                     </div>
-                    {m.delegadoCelular && (
-                      <a
-                        href={`https://wa.me/591${m.delegadoCelular}`}
-                        target='_blank'
-                        rel='noopener noreferrer'
-                        className='p-1.5 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors'
-                        title='Chat de WhatsApp'
-                      >
-                        <MessageSquare className='h-4 w-4' />
-                      </a>
-                    )}
-                  </div>
-                ) : (
-                  <p className='text-[11px] italic text-muted-foreground pt-1'>Sin delegado asignado a esta mesa</p>
-                )}
-              </div>
-            ))}
+                  ) : (
+                    <p className='text-[11px] italic text-muted-foreground pt-1'>Sin delegado asignado a esta mesa</p>
+                  )}
+                </div>
+              )
+            })}
           </div>
 
           <DialogFooter className='pt-2'>
