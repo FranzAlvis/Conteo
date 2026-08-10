@@ -1,0 +1,65 @@
+# Despliegue de producción para el día del evento (LAN local).
+# Uso: ver README.md, sección "Despliegue con Docker Compose".
+#
+#   cp .env.docker.example .env
+#   nano .env                 # completar contraseñas y secretos reales
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Este archivo es independiente de docker-compose.yml (el que ya usás para
+# desarrollo local): no lo reemplaza ni lo toca.
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: conteo_postgres_prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-conteo_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Debes definir POSTGRES_PASSWORD en .env}
+      POSTGRES_DB: ${POSTGRES_DB:-conteo_votos_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-conteo_user} -d ${POSTGRES_DB:-conteo_votos_db}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: conteo_backend_prod
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-conteo_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-conteo_votos_db}?schema=public
+      JWT_SECRET: ${JWT_SECRET:?Debes definir JWT_SECRET en .env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      PORT: 3000
+      CORS_ORIGIN: '*'
+      UPLOADS_DIR: uploads
+      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-5}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Debes definir ADMIN_PASSWORD en .env}
+      ADMIN_NOMBRE: ${ADMIN_NOMBRE:-Administrador}
+    volumes:
+      - uploads_data:/app/uploads
+    ports:
+      # Solo accesible desde la propia laptop (curl localhost:3000/health
+      # para debug); en la red LAN solo se expone nginx en el puerto 80.
+      - '127.0.0.1:3000:3000'
+
+  frontend:
+    build: ./frontend
+    container_name: conteo_frontend_prod
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - '${FRONTEND_PORT:-80}:80'
+
+volumes:
+  postgres_data:
+  uploads_data:

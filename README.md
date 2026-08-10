@@ -110,7 +110,124 @@ pnpm dev
 
 ---
 
-## 🔑 Credenciales de Prueba (Seed Data)
+## 🚀 Despliegue en Producción (día del evento, Docker Compose)
+
+Este es el flujo pensado para la laptop del evento: **una sola máquina**, red LAN local (sin salir a internet), atendiendo hasta ~1000 personas conectadas simultáneamente. Todo corre en 3 contenedores (Postgres + backend + nginx sirviendo el frontend), orquestados con `docker-compose.prod.yml`. No reemplaza el `docker-compose.yml` de desarrollo — son archivos independientes.
+
+### Prerrequisitos en la laptop del evento
+- Solo necesita **[Docker](https://docs.docker.com/engine/install/ubuntu/) y Docker Compose** instalados (nada de Node, pnpm ni PostgreSQL a mano).
+- Verificar: `docker --version` y `docker compose version`.
+
+### 1. Clonar el repositorio
+
+```bash
+git clone <url-del-repositorio> conteo
+cd conteo
+```
+
+### 2. Configurar los secretos reales
+
+```bash
+cp .env.docker.example .env
+nano .env   # completar POSTGRES_PASSWORD, JWT_SECRET y ADMIN_PASSWORD reales
+```
+
+Generar valores seguros si hace falta:
+
+```bash
+openssl rand -base64 24   # para POSTGRES_PASSWORD / ADMIN_PASSWORD
+openssl rand -base64 32   # para JWT_SECRET
+```
+
+> El `.env` de esta raíz **nunca se sube a git** (ya está en `.gitignore`). Es el único archivo que hay que tocar a mano.
+
+### 3. Levantar todo con un solo comando
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+La primera vez construye las imágenes (unos minutos) y parametriza la base de datos automáticamente con los **datos reales**: candidatos, facultades y las mesas del CSV oficial (`backend/prisma/data/mesas_facultades.csv`), todas en estado `PENDIENTE`, más un único usuario `ADMIN` con la contraseña que pusiste en `.env`. **No se crean votos, delegados ni mesas de ejemplo falsas** — eso es exclusivo del seed de desarrollo (`prisma/seed.ts`), nunca corre en producción.
+
+Si el contenedor se reinicia (corte de luz, reinicio de la laptop, etc.), este parametrizado inicial **no se repite ni borra nada**: al arrancar detecta que ya hay datos y los deja intactos.
+
+### 4. Verificar que levantó bien
+
+```bash
+docker compose -f docker-compose.prod.yml ps      # los 3 servicios en estado "healthy"
+curl http://localhost/api/health                  # respuesta del backend vía nginx
+```
+
+### 5. Conectar los dispositivos del evento
+
+Todos los dispositivos deben estar en la **misma red WiFi/LAN** que la laptop. Averiguar la IP local de la laptop:
+
+```bash
+hostname -I   # o: ip addr show | grep "inet "
+```
+
+Compartir esa IP con los transcriptores/visores: `http://<ip-de-la-laptop>` (puerto 80, no hace falta escribirlo). Si el firewall (`ufw`) está activo, abrir el puerto:
+
+```bash
+sudo ufw allow 80/tcp
+```
+
+### 6. Después de levantar: pasos manuales pendientes
+
+El seed solo deja la **estructura** lista. Antes de la votación real, entrar como ADMIN y:
+- Crear los usuarios reales `TRANSCRIPTOR`/`VISOR`/`AYUDANTE` (módulo Usuarios) — no se generan automáticamente.
+- Asignar mesas a cada transcriptor (módulo Usuarios o Grupos de WhatsApp).
+- Cargar el padrón real (`totalPadron`) de cada mesa si corresponde (por defecto queda en 0).
+- Registrar los delegados de mesa reales.
+
+### Comandos útiles
+
+```bash
+# Ver logs en vivo (los 3 servicios)
+docker compose -f docker-compose.prod.yml logs -f
+
+# Ver logs de un solo servicio
+docker compose -f docker-compose.prod.yml logs -f backend
+
+# Reiniciar todo
+docker compose -f docker-compose.prod.yml restart
+
+# Detener todo (los datos quedan guardados en volúmenes de Docker)
+docker compose -f docker-compose.prod.yml down
+
+# Reconstruir después de bajar cambios nuevos del repo
+git pull
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+### Arquitectura del despliegue
+
+```
+Dispositivos del evento (celulares/PCs en el WiFi del lugar)
+              │  http://<ip-laptop>
+              ▼
+        ┌───────────────┐
+        │  nginx (:80)  │  sirve el build estático del frontend
+        │  (frontend)   │  + proxy /api/ → backend
+        └───────┬───────┘  + proxy /socket.io/ → backend (WebSocket)
+                │
+                ▼
+        ┌───────────────┐
+        │  NestJS (:3000)│  API REST + Gateway WebSocket
+        │  (backend)    │  solo accesible dentro de la red de Docker
+        └───────┬───────┘  (127.0.0.1:3000 expuesto solo para debug local)
+                │
+                ▼
+        ┌───────────────┐
+        │  PostgreSQL   │  volumen persistente (sobrevive a reinicios)
+        └───────────────┘
+```
+
+El frontend nunca llama a una IP fija: usa rutas relativas (`/api`, `/socket.io/`) que nginx resuelve al mismo origen, así que funciona sin importar qué IP le asigne el router el día del evento.
+
+---
+
+## 🔑 Credenciales de Prueba (Seed Data — solo desarrollo)
 
 El script de parametrización (`prisma/seed.ts`) crea automáticamente los siguientes usuarios de prueba:
 
@@ -137,17 +254,26 @@ Para optimizar el tráfico de red y garantizar la privacidad de los datos en edi
 
 ```
 Conteo/
-├── docker-compose.yml       # Orquestación de PostgreSQL y Adminer
+├── docker-compose.yml       # Orquestación de PostgreSQL y Adminer (desarrollo)
+├── docker-compose.prod.yml  # Orquestación completa de producción (postgres+backend+frontend)
+├── .env.docker.example      # Plantilla de secretos para docker-compose.prod.yml
 ├── README.md                # Documentación del proyecto
 ├── backend/                 # API NestJS + Prisma ORM
-│   ├── docker-compose.yml   # Docker Compose backend
+│   ├── Dockerfile           # Imagen de producción del backend
+│   ├── docker-entrypoint.sh # Migraciones + seed idempotente + arranque
+│   ├── docker-compose.yml   # Docker Compose backend (desarrollo)
 │   ├── prisma/
 │   │   ├── schema.prisma    # Modelos: User, Cargo, Candidato, Mesa, VotoMesa, ActaMesa
-│   │   └── seed.ts          # Script de parametrización inicial
+│   │   ├── seed.ts          # Seed de DESARROLLO (con datos falsos de demo)
+│   │   ├── seed.production.ts # Seed de PRODUCCIÓN (solo datos reales, idempotente)
+│   │   └── data/mesas_facultades.csv # Fuente oficial de mesas y facultades
 │   └── src/
 │       ├── events/          # Gateway WebSockets (Socket.io Rooms)
 │       └── main.ts          # Punto de entrada NestJS
 └── frontend/                # Cliente React (sobre template shadcn-admin)
+    ├── Dockerfile           # Build estático + nginx
+    ├── nginx.conf           # Sirve el SPA + proxy /api y /socket.io/ al backend
+    ├── .env.production      # VITE_API_URL=/api (ruta relativa, sin IP fija)
     ├── src/
     │   ├── components/      # UI primitives & layout (LiveStatusBadge, ProfileDropdown, etc.)
     │   ├── features/        # Módulos por dominio (auth/sign-in, dashboard, mesas, users, configuracion, resultados)

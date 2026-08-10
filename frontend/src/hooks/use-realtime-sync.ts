@@ -32,7 +32,12 @@ export function useRealtimeSync() {
         // El resumen se reintentará vía las páginas que lo consultan con React Query
       })
 
-    const socket = io(API_URL, { transports: ['websocket'], autoConnect: true })
+    // API_URL es una URL absoluta en desarrollo (http://localhost:3000) pero
+    // una ruta relativa en el build de producción detrás de nginx (/api):
+    // en ese caso el socket debe conectar al mismo origen (sin URI), ya que
+    // nginx expone el WebSocket en /socket.io/ del mismo host.
+    const socketUrl = API_URL.startsWith('/') ? undefined : API_URL
+    const socket = io(socketUrl, { transports: ['websocket'], autoConnect: true })
 
     socket.on('connect', () => {
       setSocketConectado(true)
