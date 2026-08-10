@@ -167,6 +167,14 @@ export function UsersFeature() {
     setSelectedMesasMap(map)
   }
 
+  const mesasDisponiblesParaAsignar = assigningUser
+    ? mesas.filter((m) => {
+        const dueño = asignaciones.find((a) => a.mesasCodigos.includes(m.codigo))
+        return !dueño || dueño.transcriptorId === assigningUser.id
+      })
+    : []
+  const mesasOcultasPorOtroTranscriptor = mesas.length - mesasDisponiblesParaAsignar.length
+
   const handleSaveUserAssignment = (e: React.FormEvent) => {
     e.preventDefault()
     if (!assigningUser) return
@@ -380,12 +388,17 @@ export function UsersFeature() {
               </DialogTitle>
               <DialogDescription className='text-xs'>
                 Seleccione las mesas asignadas exclusivamente a <strong>{assigningUser.name}</strong> (+591 {assigningUser.telefono}).
+                {mesasOcultasPorOtroTranscriptor > 0 && (
+                  <span className='block mt-1 text-amber-600 dark:text-amber-400'>
+                    {mesasOcultasPorOtroTranscriptor} mesa(s) ya asignada(s) a otro transcriptor no se muestran aquí.
+                  </span>
+                )}
               </DialogDescription>
             </DialogHeader>
 
             <form onSubmit={handleSaveUserAssignment} className='space-y-4 py-2'>
               <div className='space-y-2 max-h-60 overflow-y-auto pr-1'>
-                {mesas.map((m) => (
+                {mesasDisponiblesParaAsignar.map((m) => (
                   <label
                     key={m.id}
                     className='flex items-center justify-between p-2.5 rounded-lg border bg-card hover:bg-muted/30 cursor-pointer'

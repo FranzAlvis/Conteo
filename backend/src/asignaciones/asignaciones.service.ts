@@ -68,11 +68,23 @@ export class AsignacionesService {
     }
 
     if (mesaIds.length > 0) {
-      const encontradas = await this.prisma.mesa.count({
+      const mesasSolicitadas = await this.prisma.mesa.findMany({
         where: { id: { in: mesaIds } },
+        select: { id: true, codigo: true, transcriptorId: true },
       });
-      if (encontradas !== new Set(mesaIds).size) {
+      if (mesasSolicitadas.length !== new Set(mesaIds).size) {
         throw new BadRequestException('Una o más mesas indicadas no existen');
+      }
+
+      const enConflicto = mesasSolicitadas.filter(
+        (m) => m.transcriptorId && m.transcriptorId !== transcriptorId,
+      );
+      if (enConflicto.length > 0) {
+        throw new BadRequestException(
+          `Las siguientes mesas ya están asignadas a otro transcriptor: ${enConflicto
+            .map((m) => m.codigo)
+            .join(', ')}`,
+        );
       }
     }
 
