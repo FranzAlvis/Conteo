@@ -83,6 +83,7 @@ export function MesasFeature() {
   const [openCrearMesaModal, setOpenCrearMesaModal] = useState(false)
   const [openCrearFacultadModal, setOpenCrearFacultadModal] = useState(false)
   const [openTranscribirModal, setOpenTranscribirModal] = useState(false)
+  const [facultadModalId, setFacultadModalId] = useState<string | null>(null)
   const [mesaATranscribirId, setMesaATranscribirId] = useState('')
   const [votosMap, setVotosMap] = useState<Record<string, number>>({})
   const [actaFile, setActaFile] = useState<File | null>(null)
@@ -168,10 +169,10 @@ export function MesasFeature() {
     return matchesSearch && matchesFacultad && matchesStatus
   })
 
-  const mesasDeFacultadSeleccionada = selectedFacultadId
-    ? mesas.filter((m) => m.facultadId === selectedFacultadId)
+  const mesasDeFacultadModal = facultadModalId
+    ? mesas.filter((m) => m.facultadId === facultadModalId)
     : []
-  const facultadSeleccionada = facultades.find((f) => f.id === selectedFacultadId)
+  const facultadDelModal = facultades.find((f) => f.id === facultadModalId)
 
   const onCrearMesaSubmit = (values: z.infer<typeof crearMesaSchema>) => {
     crearMesaMutation.mutate({
@@ -291,7 +292,10 @@ export function MesasFeature() {
                 return (
                   <Card
                     key={fac.id}
-                    onClick={() => setSelectedFacultadId(isSelected ? null : fac.id)}
+                    onClick={() => {
+                      setSelectedFacultadId(fac.id)
+                      setFacultadModalId(fac.id)
+                    }}
                     className={`cursor-pointer transition-all hover:shadow-lg relative overflow-hidden ${
                       isSelected
                         ? 'border-primary ring-2 ring-primary/40 bg-primary/5 shadow-md'
@@ -358,68 +362,6 @@ export function MesasFeature() {
             </div>
           )}
         </div>
-
-        {/* DETALLE VISUAL DE MESAS Y DELEGADOS SI HAY UNA FACULTAD SELECCIONADA */}
-        {selectedFacultadId && facultadSeleccionada && (
-          <div className='p-4 rounded-xl border border-primary/30 bg-primary/5 space-y-4'>
-            <div className='flex items-center justify-between'>
-              <div>
-                <h3 className='text-base font-extrabold text-foreground flex items-center gap-2'>
-                  <Building2 className='h-5 w-5 text-primary' />
-                  Desglose de Mesas y Delegados en: <span className='text-primary underline'>{facultadSeleccionada.nombre}</span>
-                </h3>
-                <p className='text-xs text-muted-foreground pt-0.5'>
-                  {mesasDeFacultadSeleccionada.length} mesas asociadas a esta facultad con sus delegados de contacto directo.
-                </p>
-              </div>
-            </div>
-
-            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-              {mesasDeFacultadSeleccionada.map((m) => (
-                <div key={m.id} className='p-3.5 rounded-lg bg-card border border-border/60 space-y-3 shadow-xs'>
-                  <div className='flex items-center justify-between border-b pb-2'>
-                    <Badge variant='outline' className='font-mono font-bold text-xs bg-primary/10 text-primary border-primary/30'>
-                      {m.codigo}
-                    </Badge>
-                    <Badge variant='outline' className='text-[10px] font-bold'>
-                      {m.tipo}
-                    </Badge>
-                  </div>
-
-                  <div className='text-xs space-y-1'>
-                    <p className='text-muted-foreground'>Transcriptor: <strong className='text-foreground'>{m.transcriptorNombre ?? 'Sin asignar'}</strong></p>
-                    <p className='text-muted-foreground'>Estado: <strong className='text-emerald-600 font-bold'>{m.estado}</strong></p>
-                  </div>
-
-                  {m.delegadoNombre ? (
-                    <div className='p-2.5 rounded bg-muted/40 border flex items-center justify-between text-xs'>
-                      <div>
-                        <p className='text-[10px] font-bold uppercase text-muted-foreground'>Delegado de Mesa</p>
-                        <p className='font-bold text-foreground flex items-center gap-1'>
-                          <UserCheck className='h-3.5 w-3.5 text-primary' /> {m.delegadoNombre}
-                        </p>
-                        <p className='text-[11px] font-mono text-muted-foreground'>+591 {m.delegadoCelular}</p>
-                      </div>
-                      {m.delegadoCelular && (
-                        <a
-                          href={`https://wa.me/591${m.delegadoCelular}`}
-                          target='_blank'
-                          rel='noopener noreferrer'
-                          className='p-1.5 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors'
-                          title='Chat de WhatsApp'
-                        >
-                          <MessageSquare className='h-4 w-4' />
-                        </a>
-                      )}
-                    </div>
-                  ) : (
-                    <p className='text-[11px] italic text-muted-foreground pt-1'>Sin delegado asignado a esta mesa</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* TABLA COMPLETA DE MESAS */}
         <Card className='border-border/60 shadow-sm'>
@@ -738,6 +680,74 @@ export function MesasFeature() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: DESGLOSE DE MESAS Y DELEGADOS DE LA FACULTAD SELECCIONADA */}
+      <Dialog open={!!facultadModalId} onOpenChange={(open) => !open && setFacultadModalId(null)}>
+        <DialogContent className='sm:max-w-3xl max-h-[85vh] overflow-y-auto'>
+          <DialogHeader>
+            <DialogTitle className='text-lg font-bold flex items-center gap-2'>
+              <Building2 className='h-5 w-5 text-primary' />
+              {facultadDelModal?.nombre}
+            </DialogTitle>
+            <DialogDescription className='text-xs'>
+              {mesasDeFacultadModal.length} mesas asociadas a esta facultad con sus delegados de contacto directo.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-4 py-2'>
+            {mesasDeFacultadModal.map((m) => (
+              <div key={m.id} className='p-3.5 rounded-lg bg-card border border-border/60 space-y-3 shadow-xs'>
+                <div className='flex items-center justify-between border-b pb-2'>
+                  <Badge variant='outline' className='font-mono font-bold text-xs bg-primary/10 text-primary border-primary/30'>
+                    {m.codigo}
+                  </Badge>
+                  <Badge variant='outline' className='text-[10px] font-bold'>
+                    {m.tipo}
+                  </Badge>
+                </div>
+
+                <div className='text-xs space-y-1'>
+                  <p className='text-muted-foreground'>Transcriptor: <strong className='text-foreground'>{m.transcriptorNombre ?? 'Sin asignar'}</strong></p>
+                  <p className='text-muted-foreground'>Estado: <strong className='text-emerald-600 font-bold'>{m.estado}</strong></p>
+                </div>
+
+                {m.delegadoNombre ? (
+                  <div className='p-2.5 rounded bg-muted/40 border flex items-center justify-between text-xs'>
+                    <div>
+                      <p className='text-[10px] font-bold uppercase text-muted-foreground'>Delegado de Mesa</p>
+                      <p className='font-bold text-foreground flex items-center gap-1'>
+                        <UserCheck className='h-3.5 w-3.5 text-primary' /> {m.delegadoNombre}
+                      </p>
+                      {m.delegadoCelular && (
+                        <p className='text-[11px] font-mono text-muted-foreground'>+591 {m.delegadoCelular}</p>
+                      )}
+                    </div>
+                    {m.delegadoCelular && (
+                      <a
+                        href={`https://wa.me/591${m.delegadoCelular}`}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        className='p-1.5 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors'
+                        title='Chat de WhatsApp'
+                      >
+                        <MessageSquare className='h-4 w-4' />
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  <p className='text-[11px] italic text-muted-foreground pt-1'>Sin delegado asignado a esta mesa</p>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter className='pt-2'>
+            <Button type='button' variant='outline' onClick={() => setFacultadModalId(null)} className='text-xs'>
+              Cerrar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
