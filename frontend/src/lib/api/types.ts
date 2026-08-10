@@ -49,6 +49,7 @@ export interface Mesa {
   transcriptorTelefono: string | null
   delegadoNombre: string | null
   delegadoCelular: string | null
+  delegadoCorreo: string | null
   votosRegistrados: number
   votosPorCandidato: Record<string, number>
   actaFotoUrl: string | null

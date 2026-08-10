@@ -54,6 +54,7 @@ export class MesasService {
       transcriptorTelefono: mesa.transcriptor?.telefono ?? null,
       delegadoNombre: delegado?.nombre ?? null,
       delegadoCelular: delegado?.celular ?? null,
+      delegadoCorreo: delegado?.correo ?? null,
       votosRegistrados: mesa.votos.reduce((acc, v) => acc + v.cantidad, 0),
       votosPorCandidato: Object.fromEntries(
         mesa.votos.map((v) => [v.candidatoId, v.cantidad]),

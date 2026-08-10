@@ -5,7 +5,7 @@ import { mesasApi } from '@/lib/api/mesas'
 import { candidatosApi } from '@/lib/api/candidatos'
 import { usersApi } from '@/lib/api/users'
 import { actasApi } from '@/lib/api/actas'
-import type { TipoMesa } from '@/lib/api/types'
+import type { Mesa, TipoMesa } from '@/lib/api/types'
 import { handleServerError } from '@/lib/handle-server-error'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
@@ -86,11 +86,7 @@ export function MesasFeature() {
   const [mesaATranscribirId, setMesaATranscribirId] = useState('')
   const [votosMap, setVotosMap] = useState<Record<string, number>>({})
   const [actaFile, setActaFile] = useState<File | null>(null)
-  const [viendoContacto, setViendoContacto] = useState<{
-    titulo: string
-    nombre: string
-    celular: string | null
-  } | null>(null)
+  const [viendoDelegadoDeMesa, setViendoDelegadoDeMesa] = useState<Mesa | null>(null)
 
   const { data: facultades = [], isPending: facultadesPending } = useQuery({
     queryKey: ['facultades'],
@@ -466,8 +462,7 @@ export function MesasFeature() {
                     <TableRow>
                       <TableHead className='font-semibold text-xs py-3 w-[110px]'>Código Mesa</TableHead>
                       <TableHead className='font-semibold text-xs py-3 w-[140px]'>Facultad</TableHead>
-                      <TableHead className='font-semibold text-xs py-3 w-[170px]'>Delegado</TableHead>
-                      <TableHead className='font-semibold text-xs py-3 w-[170px]'>Transcriptor Encargado</TableHead>
+                      <TableHead className='font-semibold text-xs py-3 w-[200px]'>Delegado</TableHead>
                       <TableHead className='font-semibold text-xs py-3 text-center w-[110px]'>Votos Registrados</TableHead>
                       <TableHead className='font-semibold text-xs py-3 text-center w-[100px]'>Última Act.</TableHead>
                       <TableHead className='font-semibold text-xs py-3 text-right w-[110px]'>Estado</TableHead>
@@ -488,62 +483,20 @@ export function MesasFeature() {
                         <TableCell className='text-xs py-3'>
                           {m.delegadoNombre ? (
                             <div className='flex items-center gap-1'>
-                              <span className='font-medium text-foreground truncate max-w-[100px]' title={m.delegadoNombre}>
+                              <span className='font-medium text-foreground truncate max-w-[150px]' title={m.delegadoNombre}>
                                 {m.delegadoNombre}
                               </span>
                               <button
                                 type='button'
-                                onClick={() =>
-                                  setViendoContacto({
-                                    titulo: 'Delegado de Mesa',
-                                    nombre: m.delegadoNombre!,
-                                    celular: m.delegadoCelular,
-                                  })
-                                }
+                                onClick={() => setViendoDelegadoDeMesa(m)}
                                 className='p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary shrink-0'
-                                title='Ver datos del delegado'
+                                title='Ver datos del delegado y transcriptor'
                               >
                                 <Search className='h-3.5 w-3.5' />
                               </button>
-                              {m.delegadoCelular && (
-                                <a
-                                  href={`https://wa.me/591${m.delegadoCelular}`}
-                                  target='_blank'
-                                  rel='noopener noreferrer'
-                                  className='p-1 rounded bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shrink-0'
-                                  title='Chat de WhatsApp'
-                                >
-                                  <MessageSquare className='h-3.5 w-3.5' />
-                                </a>
-                              )}
                             </div>
                           ) : (
                             <span className='italic text-[11px] text-muted-foreground'>Sin delegado</span>
-                          )}
-                        </TableCell>
-                        <TableCell className='text-xs font-medium text-foreground py-3'>
-                          {m.transcriptorNombre ? (
-                            <div className='flex items-center gap-1'>
-                              <span className='truncate max-w-[130px]' title={m.transcriptorNombre}>
-                                {m.transcriptorNombre}
-                              </span>
-                              <button
-                                type='button'
-                                onClick={() =>
-                                  setViendoContacto({
-                                    titulo: 'Transcriptor Encargado',
-                                    nombre: m.transcriptorNombre!,
-                                    celular: m.transcriptorTelefono,
-                                  })
-                                }
-                                className='p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary shrink-0'
-                                title='Ver datos del transcriptor'
-                              >
-                                <Search className='h-3.5 w-3.5' />
-                              </button>
-                            </div>
-                          ) : (
-                            'Sin asignar'
                           )}
                         </TableCell>
                         <TableCell className='text-xs text-center font-bold text-primary py-3'>
@@ -788,36 +741,66 @@ export function MesasFeature() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal 4: VER DATOS DE DELEGADO / TRANSCRIPTOR */}
-      <Dialog open={!!viendoContacto} onOpenChange={(open) => !open && setViendoContacto(null)}>
+      {/* Modal 4: VER DATOS DE DELEGADO Y TRANSCRIPTOR DE LA MESA */}
+      <Dialog open={!!viendoDelegadoDeMesa} onOpenChange={(open) => !open && setViendoDelegadoDeMesa(null)}>
         <DialogContent className='sm:max-w-sm'>
           <DialogHeader>
             <DialogTitle className='text-lg font-bold flex items-center gap-2'>
               <UserCheck className='h-5 w-5 text-primary' />
-              {viendoContacto?.titulo}
+              Delegado de {viendoDelegadoDeMesa?.codigo}
             </DialogTitle>
           </DialogHeader>
 
-          <div className='space-y-3 py-2 text-xs'>
-            <div>
-              <p className='text-[11px] font-bold uppercase text-muted-foreground'>Nombre</p>
-              <p className='font-bold text-foreground'>{viendoContacto?.nombre}</p>
+          <div className='space-y-4 py-2 text-xs'>
+            <div className='space-y-3'>
+              <div>
+                <p className='text-[11px] font-bold uppercase text-muted-foreground'>Nombre</p>
+                <p className='font-bold text-foreground'>{viendoDelegadoDeMesa?.delegadoNombre}</p>
+              </div>
+              <div>
+                <p className='text-[11px] font-bold uppercase text-muted-foreground'>Celular</p>
+                <p className='font-mono font-semibold text-foreground'>
+                  {viendoDelegadoDeMesa?.delegadoCelular
+                    ? `+591 ${viendoDelegadoDeMesa.delegadoCelular}`
+                    : 'Sin teléfono registrado'}
+                </p>
+              </div>
+              <div>
+                <p className='text-[11px] font-bold uppercase text-muted-foreground'>Correo</p>
+                <p className='font-semibold text-foreground'>
+                  {viendoDelegadoDeMesa?.delegadoCorreo || 'No tiene correo registrado'}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className='text-[11px] font-bold uppercase text-muted-foreground'>Celular</p>
-              <p className='font-mono font-semibold text-foreground'>
-                {viendoContacto?.celular ? `+591 ${viendoContacto.celular}` : 'Sin teléfono registrado'}
-              </p>
+
+            <div className='space-y-3 pt-3 border-t border-border/50'>
+              <p className='text-[11px] font-bold uppercase text-primary'>Transcriptor Encargado de esta Mesa</p>
+              <div>
+                <p className='text-[11px] font-bold uppercase text-muted-foreground'>Nombre</p>
+                <p className='font-bold text-foreground'>
+                  {viendoDelegadoDeMesa?.transcriptorNombre ?? 'Sin transcriptor asignado'}
+                </p>
+              </div>
+              {viendoDelegadoDeMesa?.transcriptorNombre && (
+                <div>
+                  <p className='text-[11px] font-bold uppercase text-muted-foreground'>Celular</p>
+                  <p className='font-mono font-semibold text-foreground'>
+                    {viendoDelegadoDeMesa.transcriptorTelefono
+                      ? `+591 ${viendoDelegadoDeMesa.transcriptorTelefono}`
+                      : 'Sin teléfono registrado'}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
           <DialogFooter className='pt-2'>
-            <Button type='button' variant='outline' onClick={() => setViendoContacto(null)} className='text-xs'>
+            <Button type='button' variant='outline' onClick={() => setViendoDelegadoDeMesa(null)} className='text-xs'>
               Cerrar
             </Button>
-            {viendoContacto?.celular && (
+            {viendoDelegadoDeMesa?.delegadoCelular && (
               <a
-                href={`https://wa.me/591${viendoContacto.celular}`}
+                href={`https://wa.me/591${viendoDelegadoDeMesa.delegadoCelular}`}
                 target='_blank'
                 rel='noopener noreferrer'
                 className='inline-flex items-center justify-center gap-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md transition-colors'
