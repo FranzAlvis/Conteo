@@ -58,6 +58,14 @@ export function useRealtimeSync() {
       queryClient.invalidateQueries({ queryKey: ['configuracion'] })
     })
 
+    socket.on('sistemaReseteado', () => {
+      queryClient.invalidateQueries({ queryKey: ['mesas'] })
+      queryClient.invalidateQueries({ queryKey: ['asignaciones'] })
+      queryClient.invalidateQueries({ queryKey: ['resultados'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['reset-log'] })
+    })
+
     return () => {
       socket.disconnect()
     }

@@ -56,4 +56,9 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   notificarEstadoConteo(abierto: boolean) {
     this.server.to('todos').emit('conteoEstadoCambiado', { abierto });
   }
+
+  // Notificación global de puesta en 0 del sistema (A todos, para refrescar toda la caché local)
+  notificarSistemaReseteado() {
+    this.server.to('todos').emit('sistemaReseteado');
+  }
 }

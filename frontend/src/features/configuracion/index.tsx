@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { adminApi } from '@/lib/api/admin'
 import { candidatosApi } from '@/lib/api/candidatos'
 import { mesasApi } from '@/lib/api/mesas'
 import { configuracionApi } from '@/lib/api/configuracion'
@@ -32,12 +33,14 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Settings, PlusCircle, Award, Building, Trash2 } from 'lucide-react'
+import { Settings, PlusCircle, Award, Building, Trash2, ShieldAlert, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
+import { ResetSistemaDialog } from './components/reset-sistema-dialog'
 
 export function ConfiguracionFeature() {
   const queryClient = useQueryClient()
   const [openCandidatoModal, setOpenCandidatoModal] = useState(false)
+  const [openResetModal, setOpenResetModal] = useState(false)
   const [nombreCandidato, setNombreCandidato] = useState('')
   const [nombreLista, setNombreLista] = useState('')
   const [esPropio, setEsPropio] = useState(false)
@@ -53,6 +56,10 @@ export function ConfiguracionFeature() {
   const { data: configuracion } = useQuery({
     queryKey: ['configuracion'],
     queryFn: configuracionApi.get,
+  })
+  const { data: resetLog = [] } = useQuery({
+    queryKey: ['reset-log'],
+    queryFn: adminApi.getResetLog,
   })
 
   const crearCandidatoMutation = useMutation({
@@ -86,6 +93,22 @@ export function ConfiguracionFeature() {
     onError: handleServerError,
   })
 
+  const resetSistemaMutation = useMutation({
+    mutationFn: adminApi.resetSistema,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['mesas'] })
+      queryClient.invalidateQueries({ queryKey: ['asignaciones'] })
+      queryClient.invalidateQueries({ queryKey: ['resultados'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['reset-log'] })
+      setOpenResetModal(false)
+      toast.success(
+        `Sistema puesto en 0: ${data.mesasReseteadas} mesas, ${data.votosEliminados} votos y ${data.actasEliminadas} actas reiniciadas`,
+      )
+    },
+    onError: handleServerError,
+  })
+
   const handleCrearCandidato = (e: React.FormEvent) => {
     e.preventDefault()
     if (!nombreCandidato || !nombreLista) {
@@ -100,9 +123,9 @@ export function ConfiguracionFeature() {
   return (
     <>
       <Header>
-        <div className='flex items-center gap-3 me-auto'>
-          <Settings className='h-5 w-5 text-primary' />
-          <h1 className='text-base font-bold tracking-tight'>Parametrización y Configuración</h1>
+        <div className='flex items-center gap-3 me-auto min-w-0'>
+          <Settings className='h-5 w-5 text-primary shrink-0' />
+          <h1 className='text-base font-bold tracking-tight truncate min-w-0'>Parametrización y Configuración</h1>
         </div>
         <div className='flex items-center gap-3'>
           <LiveStatusBadge />
@@ -251,7 +274,50 @@ export function ConfiguracionFeature() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Zona de Peligro: Puesta en 0 */}
+        <Card className='border-destructive/40 shadow-sm'>
+          <CardHeader className='flex flex-row items-center justify-between pb-2 gap-4'>
+            <div>
+              <CardTitle className='text-base font-bold flex items-center gap-2 text-destructive'>
+                <ShieldAlert className='h-5 w-5' />
+                Zona de Peligro
+              </CardTitle>
+              <CardDescription className='text-xs'>
+                Puesta en 0: borra todos los votos y actas cargados, y deja todas las
+                mesas como PENDIENTE otra vez. Úsela solo para iniciar la votación real o
+                para hacer pruebas.
+              </CardDescription>
+            </div>
+            <Button
+              variant='destructive'
+              size='sm'
+              onClick={() => setOpenResetModal(true)}
+              className='text-xs gap-1.5 shrink-0'
+            >
+              <RotateCcw className='h-3.5 w-3.5' /> Puesta en 0
+            </Button>
+          </CardHeader>
+          {resetLog.length > 0 && (
+            <CardContent>
+              <p className='text-xs text-muted-foreground'>
+                Último reinicio: <span className='font-semibold'>{resetLog[0].ejecutadoPor.name}</span>
+                {' '}
+                el {new Date(resetLog[0].createdAt).toLocaleString()} ·{' '}
+                {resetLog[0].mesasReseteadas} mesas, {resetLog[0].votosEliminados} votos,{' '}
+                {resetLog[0].actasEliminadas} actas
+              </p>
+            </CardContent>
+          )}
+        </Card>
       </Main>
+
+      <ResetSistemaDialog
+        open={openResetModal}
+        onOpenChange={setOpenResetModal}
+        isLoading={resetSistemaMutation.isPending}
+        onConfirm={() => resetSistemaMutation.mutate('REINICIAR')}
+      />
 
       {/* Modal Nuevo Candidato */}
       <Dialog open={openCandidatoModal} onOpenChange={setOpenCandidatoModal}>

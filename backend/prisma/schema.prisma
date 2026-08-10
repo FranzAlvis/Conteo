@@ -37,9 +37,10 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  mesasAsignadas     Mesa[]     @relation("TranscriptorMesas")
-  delegadosAsignados Delegado[] @relation("TranscriptorDelegados")
+  mesasAsignadas     Mesa[]            @relation("TranscriptorMesas")
+  delegadosAsignados Delegado[]        @relation("TranscriptorDelegados")
   actasSubidas       ActaMesa[]
+  reseteosEjecutados ResetAuditoria[]
 
   @@map("users")
 }
@@ -162,4 +163,18 @@ model Configuracion {
   updatedAt     DateTime @updatedAt
 
   @@map("configuracion")
+}
+
+/// Registro de auditoría de cada "puesta en 0" del sistema (acción irreversible, solo ADMIN)
+model ResetAuditoria {
+  id              String   @id @default(uuid())
+  ejecutadoPorId  String
+  ejecutadoPor    User     @relation(fields: [ejecutadoPorId], references: [id])
+  mesasReseteadas Int
+  votosEliminados Int
+  actasEliminadas Int
+  createdAt       DateTime @default(now())
+
+  @@index([ejecutadoPorId])
+  @@map("reset_auditoria")
 }

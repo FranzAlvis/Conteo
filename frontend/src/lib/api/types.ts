@@ -127,6 +127,23 @@ export interface Configuracion {
   updatedAt: string
 }
 
+export interface ResetSistemaResult {
+  mesasReseteadas: number
+  votosEliminados: number
+  actasEliminadas: number
+  ejecutadoPor: string
+  fecha: string
+}
+
+export interface ResetLogEntry {
+  id: string
+  mesasReseteadas: number
+  votosEliminados: number
+  actasEliminadas: number
+  createdAt: string
+  ejecutadoPor: { name: string; username: string }
+}
+
 export interface ApiErrorBody {
   message: string | string[]
   error?: string

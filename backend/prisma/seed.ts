@@ -56,6 +56,7 @@ async function main() {
   console.log('🌱 Iniciando parametrización de base de datos (Seed)...');
 
   // 1. Limpiar base de datos (orden respeta dependencias FK)
+  await prisma.resetAuditoria.deleteMany();
   await prisma.delegado.deleteMany();
   await prisma.actaMesa.deleteMany();
   await prisma.votoMesa.deleteMany();

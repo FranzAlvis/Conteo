@@ -21,6 +21,7 @@ import { ResultadosModule } from './resultados/resultados.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 import { ConfiguracionModule } from './configuracion/configuracion.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { ConfiguracionModule } from './configuracion/configuracion.module';
     DashboardModule,
     AsignacionesModule,
     ConfiguracionModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [
