@@ -87,7 +87,7 @@ export class DelegadosService {
         'Ya existe un delegado registrado con ese CI',
       );
 
-    if (dto.mesaId) await this.assertMesaExiste(dto.mesaId);
+    if (dto.mesaId) await this.assertMesaDisponible(dto.mesaId);
 
     const delegado = await this.prisma.delegado.create({
       data: {
@@ -118,7 +118,7 @@ export class DelegadosService {
         );
       }
     }
-    if (dto.mesaId) await this.assertMesaExiste(dto.mesaId);
+    if (dto.mesaId) await this.assertMesaDisponible(dto.mesaId, id);
 
     const delegado = await this.prisma.delegado.update({
       where: { id },
@@ -140,8 +140,21 @@ export class DelegadosService {
     await this.prisma.delegado.delete({ where: { id } });
   }
 
-  private async assertMesaExiste(mesaId: string) {
+  /** Una mesa solo puede tener un delegado a la vez. */
+  private async assertMesaDisponible(mesaId: string, delegadoActualId?: string) {
     const mesa = await this.prisma.mesa.findUnique({ where: { id: mesaId } });
     if (!mesa) throw new BadRequestException('La mesa indicada no existe');
+
+    const delegadoConflicto = await this.prisma.delegado.findFirst({
+      where: {
+        mesaId,
+        ...(delegadoActualId ? { id: { not: delegadoActualId } } : {}),
+      },
+    });
+    if (delegadoConflicto) {
+      throw new ConflictException(
+        `La mesa ${mesa.codigo} ya tiene un delegado asignado: ${delegadoConflicto.nombre}`,
+      );
+    }
   }
 }

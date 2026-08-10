@@ -129,6 +129,11 @@ export function DelegadosFeature() {
       d.celular.includes(searchTerm)
   )
 
+  const mesasDisponiblesParaDelegado = mesas.filter((m) => {
+    const dueño = delegados.find((d) => d.mesaId === m.id)
+    return !dueño || dueño.id === editingDelegado?.id
+  })
+
   const handleOpenAdd = () => {
     setEditingDelegado(null)
     form.reset({ nombre: '', ci: '', celular: '', correo: '', mesaId: '' })
@@ -375,13 +380,18 @@ export function DelegadosFeature() {
                   <SelectItem value='SIN_ASIGNAR' className='text-xs text-amber-600 font-bold'>
                     -- Sin Mesa Asignada por Ahora --
                   </SelectItem>
-                  {mesas.map((m) => (
+                  {mesasDisponiblesParaDelegado.map((m) => (
                     <SelectItem key={m.id} value={m.id} className='text-xs'>
                       {m.codigo} — {m.facultad}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {mesas.length - mesasDisponiblesParaDelegado.length > 0 && (
+                <p className='text-[11px] text-amber-600 dark:text-amber-400'>
+                  {mesas.length - mesasDisponiblesParaDelegado.length} mesa(s) ya tienen delegado asignado y no se muestran aquí.
+                </p>
+              )}
             </div>
 
             <DialogFooter className='pt-2'>
