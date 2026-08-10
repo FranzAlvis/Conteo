@@ -89,6 +89,14 @@ export function AsignacionesFeature() {
     setSelectedMesasMap((prev) => ({ ...prev, [mesaId]: checked }))
   }
 
+  const mesasDisponiblesParaAsignar = selectedTranscriptor
+    ? mesas.filter((m) => {
+        const dueño = asignaciones.find((a) => a.mesasCodigos.includes(m.codigo))
+        return !dueño || dueño.transcriptorId === selectedTranscriptor.transcriptorId
+      })
+    : []
+  const mesasOcultasPorOtroTranscriptor = mesas.length - mesasDisponiblesParaAsignar.length
+
   const handleSaveAsignacion = (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedTranscriptor) return
@@ -257,12 +265,17 @@ export function AsignacionesFeature() {
               </DialogTitle>
               <DialogDescription className='text-xs'>
                 Seleccione las mesas que transcribirá <strong>{selectedTranscriptor.transcriptorNombre}</strong>.
+                {mesasOcultasPorOtroTranscriptor > 0 && (
+                  <span className='block mt-1 text-amber-600 dark:text-amber-400'>
+                    {mesasOcultasPorOtroTranscriptor} mesa(s) ya asignada(s) a otro transcriptor no se muestran aquí.
+                  </span>
+                )}
               </DialogDescription>
             </DialogHeader>
 
             <form onSubmit={handleSaveAsignacion} className='space-y-4 py-2'>
               <div className='space-y-2 max-h-60 overflow-y-auto pr-1'>
-                {mesas.map((m) => (
+                {mesasDisponiblesParaAsignar.map((m) => (
                   <div
                     key={m.id}
                     className='flex items-center justify-between p-2.5 rounded-lg border bg-card hover:bg-muted/30 cursor-pointer'
