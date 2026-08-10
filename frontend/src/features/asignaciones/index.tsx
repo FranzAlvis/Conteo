@@ -24,7 +24,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
 import {
   Users,
   UserCheck,
@@ -276,16 +275,16 @@ export function AsignacionesFeature() {
             <form onSubmit={handleSaveAsignacion} className='space-y-4 py-2'>
               <div className='space-y-2 max-h-60 overflow-y-auto pr-1'>
                 {mesasDisponiblesParaAsignar.map((m) => (
-                  <div
+                  <label
                     key={m.id}
                     className='flex items-center justify-between p-2.5 rounded-lg border bg-card hover:bg-muted/30 cursor-pointer'
-                    onClick={() => handleMesaToggle(m.id, !selectedMesasMap[m.id])}
                   >
                     <div className='flex items-center gap-2.5'>
-                      <Checkbox
+                      <input
+                        type='checkbox'
                         checked={!!selectedMesasMap[m.id]}
-                        className='pointer-events-none'
-                        tabIndex={-1}
+                        onChange={(e) => handleMesaToggle(m.id, e.target.checked)}
+                        className='h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary'
                       />
                       <div>
                         <p className='text-xs font-bold text-foreground'>{m.codigo}</p>
@@ -296,7 +295,7 @@ export function AsignacionesFeature() {
                     <Badge variant='outline' className='text-[10px] font-bold'>
                       {m.tipo}
                     </Badge>
-                  </div>
+                  </label>
                 ))}
               </div>
 
