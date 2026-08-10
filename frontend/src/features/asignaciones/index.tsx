@@ -271,7 +271,8 @@ export function AsignacionesFeature() {
                     <div className='flex items-center gap-2.5'>
                       <Checkbox
                         checked={!!selectedMesasMap[m.id]}
-                        onCheckedChange={(val) => handleMesaToggle(m.id, !!val)}
+                        className='pointer-events-none'
+                        tabIndex={-1}
                       />
                       <div>
                         <p className='text-xs font-bold text-foreground'>{m.codigo}</p>
