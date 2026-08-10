@@ -141,9 +141,9 @@ export function TranscripcionFeature() {
   return (
     <>
       <Header>
-        <div className='flex items-center gap-3 me-auto'>
-          <FileSpreadsheet className='h-5 w-5 text-primary' />
-          <h1 className='text-base font-bold tracking-tight'>Módulo de Transcripción de Actas</h1>
+        <div className='flex items-center gap-3 me-auto min-w-0'>
+          <FileSpreadsheet className='h-5 w-5 text-primary shrink-0' />
+          <h1 className='text-base font-bold tracking-tight truncate min-w-0'>Módulo de Transcripción de Actas</h1>
         </div>
         <div className='flex items-center gap-3'>
           <LiveStatusBadge />
@@ -309,15 +309,15 @@ export function TranscripcionFeature() {
       {/* Modal Transcripción y Edición de Mesa */}
       {selectedMesa && (
         <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-          <DialogContent className='sm:max-w-lg max-h-[90vh] overflow-y-auto'>
+          <DialogContent className='p-4 sm:p-6 sm:max-w-lg max-h-[90vh] overflow-y-auto'>
             <DialogHeader>
-              <div className='flex items-center justify-between pe-4'>
-                <DialogTitle className='text-lg font-bold flex items-center gap-2'>
-                  <FileSpreadsheet className='h-5 w-5 text-primary' />
-                  Transcripción de {selectedMesa.codigo}
+              <div className='flex flex-wrap items-center justify-between gap-2 pe-4'>
+                <DialogTitle className='text-lg font-bold flex items-center gap-2 min-w-0'>
+                  <FileSpreadsheet className='h-5 w-5 text-primary shrink-0' />
+                  <span className='truncate'>Transcripción de {selectedMesa.codigo}</span>
                 </DialogTitle>
                 {selectedMesa.tipo === 'DOCENTE' && (
-                  <Badge className='bg-purple-600 text-white font-bold text-[10px]'>Docentes (x45)</Badge>
+                  <Badge className='bg-purple-600 text-white font-bold text-[10px] shrink-0'>Docentes (x45)</Badge>
                 )}
               </div>
               <DialogDescription className='text-xs'>
@@ -326,25 +326,30 @@ export function TranscripcionFeature() {
             </DialogHeader>
 
             <form onSubmit={handleGuardar} className='space-y-5 py-2'>
-              <div className='space-y-3 bg-muted/20 p-3.5 rounded-xl border border-border/60'>
+              <div className='space-y-3 bg-muted/20 p-2.5 sm:p-3.5 rounded-xl border border-border/60'>
                 <p className='text-xs font-bold uppercase tracking-wider text-muted-foreground'>
                   Votos Registrados por Candidato
                 </p>
 
                 {candidatos.map((c) => (
-                  <div key={c.id} className='flex items-center justify-between gap-3 p-2 bg-card rounded-lg border'>
-                    <div className='space-y-0.5 max-w-[240px]'>
+                  <div
+                    key={c.id}
+                    className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 p-2 bg-card rounded-lg border'
+                  >
+                    <div className='space-y-0.5 min-w-0 sm:flex-1'>
                       <p className='text-xs font-bold text-foreground truncate'>{c.nombre}</p>
                       <p className='text-[11px] text-muted-foreground truncate'>{c.lista}</p>
                     </div>
 
-                    <div className='flex items-center gap-2'>
+                    <div className='flex items-center justify-between sm:justify-end gap-2 shrink-0'>
                       <Label className='text-xs font-semibold text-muted-foreground'>Votos:</Label>
                       <Input
                         type='number'
+                        inputMode='numeric'
                         min={0}
                         value={votosInputMap[c.id] ?? 0}
                         onChange={(e) => handleVoteChange(c.id, e.target.value)}
+                        onFocus={(e) => e.target.select()}
                         className='w-24 text-right font-extrabold text-sm text-primary font-mono'
                       />
                     </div>
@@ -354,7 +359,7 @@ export function TranscripcionFeature() {
 
               <div className='space-y-2'>
                 <Label className='text-xs font-semibold'>Foto de Acta de Escrutinio</Label>
-                <div className='flex items-center gap-3'>
+                <div className='flex flex-wrap items-center gap-3'>
                   <Button
                     type='button'
                     variant='outline'

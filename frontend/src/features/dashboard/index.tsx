@@ -33,10 +33,10 @@ export function Dashboard() {
     <>
       {/* ===== Top Header ===== */}
       <Header>
-        <div className='flex items-center gap-3 me-auto'>
-          <div className='font-bold text-base tracking-tight text-foreground flex items-center gap-2'>
-            <Vote className='h-5 w-5 text-primary' />
-            <span>Conteo de Votos — Vicerrectorado 2026</span>
+        <div className='flex items-center gap-3 me-auto min-w-0'>
+          <div className='font-bold text-base tracking-tight text-foreground flex items-center gap-2 min-w-0'>
+            <Vote className='h-5 w-5 text-primary shrink-0' />
+            <span className='truncate min-w-0'>Conteo de Votos — Vicerrectorado 2026</span>
           </div>
         </div>
 

@@ -58,9 +58,9 @@ export function ResultadosFeature() {
   return (
     <>
       <Header>
-        <div className='flex items-center gap-3 me-auto'>
-          <Radio className='h-5 w-5 text-primary animate-pulse' />
-          <h1 className='text-base font-bold tracking-tight'>Resultados en Tiempo Real — Visor Live Ponderado</h1>
+        <div className='flex items-center gap-3 me-auto min-w-0'>
+          <Radio className='h-5 w-5 text-primary animate-pulse shrink-0' />
+          <h1 className='text-base font-bold tracking-tight truncate min-w-0'>Resultados en Tiempo Real — Visor Live Ponderado</h1>
         </div>
         <div className='flex items-center gap-3'>
           <LiveStatusBadge />

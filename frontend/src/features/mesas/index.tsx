@@ -214,9 +214,9 @@ export function MesasFeature() {
   return (
     <>
       <Header>
-        <div className='flex items-center gap-3 me-auto'>
-          <Vote className='h-5 w-5 text-primary' />
-          <h1 className='text-base font-bold tracking-tight'>Gestión y Mapa de Mesas por Facultad</h1>
+        <div className='flex items-center gap-3 me-auto min-w-0'>
+          <Vote className='h-5 w-5 text-primary shrink-0' />
+          <h1 className='text-base font-bold tracking-tight truncate min-w-0'>Gestión y Mapa de Mesas por Facultad</h1>
         </div>
         <div className='flex items-center gap-3'>
           <LiveStatusBadge />
