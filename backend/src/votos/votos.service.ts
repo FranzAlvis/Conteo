@@ -14,6 +14,8 @@ import { TranscribirMesaDto } from './dto/transcribir-mesa.dto';
 
 @Injectable()
 export class VotosService {
+  private static readonly LIMITE_VOTOS_MESA = 2000;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly mesasService: MesasService,
@@ -48,9 +50,9 @@ export class VotosService {
     }
 
     const totalVotos = dto.votos.reduce((acc, v) => acc + v.cantidad, 0);
-    if (mesa.totalPadron > 0 && totalVotos > mesa.totalPadron) {
+    if (totalVotos > VotosService.LIMITE_VOTOS_MESA) {
       throw new BadRequestException(
-        `La suma de votos (${totalVotos}) excede el padrón de la mesa (${mesa.totalPadron})`,
+        `La suma de votos (${totalVotos}) excede el límite permitido por mesa (${VotosService.LIMITE_VOTOS_MESA})`,
       );
     }
 

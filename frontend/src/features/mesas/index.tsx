@@ -73,6 +73,8 @@ const crearFacultadSchema = z.object({
   nombre: z.string().min(1, 'El nombre de la facultad es requerido'),
 })
 
+const LIMITE_VOTOS_MESA = 2000
+
 export function MesasFeature() {
   const queryClient = useQueryClient()
   const [searchTerm, setSearchTerm] = useState('')
@@ -196,7 +198,6 @@ export function MesasFeature() {
     setOpenTranscribirModal(true)
   }
 
-  const mesaSeleccionadaParaTranscribir = mesas.find((m) => m.id === mesaATranscribirId)
   const sumaVotos = Object.values(votosMap).reduce((a, b) => a + (b || 0), 0)
 
   const onSubmitTranscribir = (e: React.FormEvent) => {
@@ -205,9 +206,8 @@ export function MesasFeature() {
       toast.error('Seleccione una mesa a transcribir')
       return
     }
-    const padron = mesaSeleccionadaParaTranscribir?.totalPadron ?? 0
-    if (padron > 0 && sumaVotos > padron) {
-      toast.error(`La suma de votos (${sumaVotos}) excede el padrón de la mesa (${padron})`)
+    if (sumaVotos > LIMITE_VOTOS_MESA) {
+      toast.error(`La suma de votos (${sumaVotos}) excede el límite permitido por mesa (${LIMITE_VOTOS_MESA})`)
       return
     }
     transcribirMutation.mutate()
