@@ -237,14 +237,6 @@ export function ResultadosFeature() {
                   </span>
                   <span className='font-extrabold text-primary text-base'>{totalVotosPonderados.toLocaleString()}</span>
                 </div>
-
-                <div className='flex justify-between items-center pt-1'>
-                  <span className='text-muted-foreground'>Transmisión:</span>
-                  <span className='font-bold text-emerald-600 flex items-center gap-1'>
-                    <span className='h-2 w-2 rounded-full bg-emerald-500 animate-ping inline-block' />
-                    WebSocket Live
-                  </span>
-                </div>
               </div>
             </CardContent>
           </Card>
