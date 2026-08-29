@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import {
   Dialog,
   DialogContent,
@@ -14,6 +15,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { User, Camera, Upload, Trash2, CheckCircle2, Loader2 } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
+import { authApi } from '@/lib/api/auth'
+import { handleServerError } from '@/lib/handle-server-error'
 import { toast } from 'sonner'
 
 interface EditProfileDialogProps {
@@ -34,7 +37,16 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
 
   const [name, setName] = useState(currentUser.name || '')
   const [avatarPreview, setAvatarPreview] = useState<string>(currentUser.avatar || '')
-  const [isLoading, setIsLoading] = useState(false)
+
+  const updateProfileMutation = useMutation({
+    mutationFn: authApi.updateProfile,
+    onSuccess: (updatedUser) => {
+      auth.setUser(updatedUser)
+      toast.success('Perfil actualizado correctamente')
+      onOpenChange(false)
+    },
+    onError: handleServerError,
+  })
 
   const roleName = Array.isArray(currentUser.role)
     ? currentUser.role[0]
@@ -74,18 +86,11 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
-
-    setTimeout(() => {
-      auth.setUser({
-        ...(auth.user || {}),
-        name,
-        avatar: avatarPreview,
-      })
-      setIsLoading(false)
-      toast.success('Perfil actualizado correctamente')
-      onOpenChange(false)
-    }, 600)
+    if (!name.trim()) {
+      toast.error('El nombre no puede estar vacío')
+      return
+    }
+    updateProfileMutation.mutate({ name: name.trim(), avatar: avatarPreview })
   }
 
   return (
@@ -202,8 +207,8 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
             >
               Cancelar
             </Button>
-            <Button type='submit' className='text-xs font-bold' disabled={isLoading}>
-              {isLoading && <Loader2 className='h-4 w-4 animate-spin mr-1' />}
+            <Button type='submit' className='text-xs font-bold' disabled={updateProfileMutation.isPending}>
+              {updateProfileMutation.isPending && <Loader2 className='h-4 w-4 animate-spin mr-1' />}
               Guardar Cambios
             </Button>
           </DialogFooter>

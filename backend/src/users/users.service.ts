@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -9,6 +10,8 @@ import { PrismaService } from '../common/prisma/prisma.service';
 import { ControlCalidadService } from '../control-calidad/control-calidad.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 
 const SALT_ROUNDS = 10;
@@ -101,6 +104,42 @@ export class UsersService {
     await this.findOne(id);
     await this.prisma.user.delete({ where: { id } });
     await this.controlCalidadService.redistribuir();
+  }
+
+  /**
+   * Autoedición del propio perfil. A propósito NO toca `role`/`isActive`/
+   * `username` (ver UpdateProfileDto) y el `id` viene siempre del usuario
+   * autenticado (JWT), nunca del cuerpo de la petición — así nadie puede
+   * editar el perfil de otra persona ni escalar su propio rol.
+   */
+  async updateProfile(id: string, dto: UpdateProfileDto): Promise<UserResponseDto> {
+    await this.findOne(id);
+    const user = await this.prisma.user.update({
+      where: { id },
+      data: {
+        name: dto.name,
+        telefono: dto.telefono,
+        avatar: dto.avatar,
+      },
+    });
+    return this.toResponse(user);
+  }
+
+  /** Cambio de la propia contraseña: exige la actual para confirmarla. */
+  async changePassword(id: string, dto: ChangePasswordDto): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+
+    const passwordValida = await bcrypt.compare(
+      dto.currentPassword,
+      user.passwordHash,
+    );
+    if (!passwordValida) {
+      throw new BadRequestException('La contraseña actual no es correcta');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.newPassword, SALT_ROUNDS);
+    await this.prisma.user.update({ where: { id }, data: { passwordHash } });
   }
 
   /** Lista liviana de transcriptores activos, usada en asignaciones y formularios de mesa. */

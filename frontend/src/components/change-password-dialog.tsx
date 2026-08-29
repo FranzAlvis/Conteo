@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import {
   Dialog,
   DialogContent,
@@ -11,6 +12,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { KeyRound, Lock, Loader2 } from 'lucide-react'
+import { authApi } from '@/lib/api/auth'
+import { handleServerError } from '@/lib/handle-server-error'
 import { toast } from 'sonner'
 
 interface ChangePasswordDialogProps {
@@ -22,7 +25,18 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+
+  const changePasswordMutation = useMutation({
+    mutationFn: authApi.changePassword,
+    onSuccess: () => {
+      toast.success('Contraseña actualizada exitosamente')
+      onOpenChange(false)
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+    },
+    onError: handleServerError,
+  })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -41,16 +55,7 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
       return
     }
 
-    setIsLoading(true)
-
-    setTimeout(() => {
-      setIsLoading(false)
-      toast.success('Contraseña actualizada exitosamente')
-      onOpenChange(false)
-      setCurrentPassword('')
-      setNewPassword('')
-      setConfirmPassword('')
-    }, 800)
+    changePasswordMutation.mutate({ currentPassword, newPassword })
   }
 
   return (
@@ -109,8 +114,8 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
             >
               Cancelar
             </Button>
-            <Button type='submit' className='text-xs font-bold' disabled={isLoading}>
-              {isLoading ? (
+            <Button type='submit' className='text-xs font-bold' disabled={changePasswordMutation.isPending}>
+              {changePasswordMutation.isPending ? (
                 <Loader2 className='h-4 w-4 animate-spin mr-1' />
               ) : (
                 <Lock className='h-4 w-4 mr-1' />
