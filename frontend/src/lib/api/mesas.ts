@@ -34,6 +34,7 @@ export interface VotoCandidatoPayload {
 export interface TranscribirMesaPayload {
   votos: VotoCandidatoPayload[]
   actaFotoUrl?: string
+  pizarraFotoUrl?: string
   observaciones?: string
 }
 
@@ -51,6 +52,9 @@ export const mesasApi = {
 
   assignTranscriptor: (id: string, transcriptorId: string | null) =>
     apiClient.patch<Mesa>(`/mesas/${id}/transcriptor`, { transcriptorId }).then((res) => res.data),
+
+  revisar: (id: string, payload: { estado: 'APROBADA' | 'RECHAZADA'; comentario?: string }) =>
+    apiClient.patch<Mesa>(`/mesas/${id}/revision`, payload).then((res) => res.data),
 
   transcribir: (id: string, payload: TranscribirMesaPayload) =>
     apiClient.post<Mesa>(`/mesas/${id}/transcribir`, payload).then((res) => res.data),

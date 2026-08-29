@@ -75,6 +75,15 @@ export function useRealtimeSync() {
       queryClient.invalidateQueries({ queryKey: ['reset-log'] })
     })
 
+    socket.on('vueltaAvanzada', () => {
+      queryClient.invalidateQueries({ queryKey: ['mesas'] })
+      queryClient.invalidateQueries({ queryKey: ['asignaciones'] })
+      queryClient.invalidateQueries({ queryKey: ['resultados'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['reset-log'] })
+      queryClient.invalidateQueries({ queryKey: ['configuracion'] })
+    })
+
     return () => {
       socket.disconnect()
     }

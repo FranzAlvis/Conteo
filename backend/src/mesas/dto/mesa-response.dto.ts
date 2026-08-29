@@ -1,4 +1,4 @@
-import { EstadoMesa, TipoMesa } from '@prisma/client';
+import { EstadoMesa, EstadoRevision, TipoMesa } from '@prisma/client';
 
 export class MesaResponseDto {
   id: string;
@@ -19,6 +19,13 @@ export class MesaResponseDto {
   votosRegistrados: number;
   votosPorCandidato: Record<string, number>;
   actaFotoUrl: string | null;
+  pizarraFotoUrl: string | null;
+  controlCalidadId: string | null;
+  controlCalidadNombre: string | null;
+  revisionEstado: EstadoRevision | null;
+  revisionComentario: string | null;
+  revisadoPorNombre: string | null;
+  revisadoEn: Date | null;
   observaciones: string | null;
   updatedAt: Date;
 }

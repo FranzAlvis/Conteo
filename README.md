@@ -47,6 +47,7 @@ El tema de color original (`zinc`) del template ha sido adaptado al color instit
 | **`ADMIN`** | Administrador del sistema electoral | Resumen, Mesas, Delegados, Usuarios, Configuración, Resultados Live |
 | **`TRANSCRIPTOR`** | Personal encargado de cargar actas | Resumen, Mesas (Carga y bloqueo), Resultados Live |
 | **`AYUDANTE`** | Apoyo logístico | Resumen, Delegados, Resultados Live |
+| **`CONTROL_CALIDAD`** | Verifica que las fotos de acta/pizarra coincidan con los votos cargados | Control de Calidad (mesas asignadas automáticamente, reparto parejo entre todos los activos de este rol) |
 | **`VISOR`** | Observadores y público autorizado | Resumen, Resultados Live |
 
 ---
@@ -175,8 +176,8 @@ sudo ufw allow 80/tcp
 ### 6. Después de levantar: pasos manuales pendientes
 
 El seed solo deja la **estructura** lista. Antes de la votación real, entrar como ADMIN y:
-- Crear los usuarios reales `TRANSCRIPTOR`/`VISOR`/`AYUDANTE` (módulo Usuarios) — no se generan automáticamente.
-- Asignar mesas a cada transcriptor (módulo Usuarios o Grupos de WhatsApp).
+- Crear los usuarios reales `TRANSCRIPTOR`/`VISOR`/`AYUDANTE`/`CONTROL_CALIDAD` (módulo Usuarios) — no se generan automáticamente.
+- Asignar mesas a cada transcriptor (módulo Usuarios o Grupos de WhatsApp). Las mesas de control de calidad se reparten solas, en partes iguales, cada vez que se crea/edita/desactiva un usuario con ese rol.
 - Cargar el padrón real (`totalPadron`) de cada mesa si corresponde (por defecto queda en 0).
 - Registrar los delegados de mesa reales.
 

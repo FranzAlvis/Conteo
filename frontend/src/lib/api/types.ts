@@ -1,4 +1,4 @@
-export type Role = 'ADMIN' | 'TRANSCRIPTOR' | 'AYUDANTE' | 'VISOR'
+export type Role = 'ADMIN' | 'TRANSCRIPTOR' | 'AYUDANTE' | 'VISOR' | 'CONTROL_CALIDAD'
 export type EstadoMesa = 'PENDIENTE' | 'EN_CARGA' | 'CARGADA'
 export type TipoMesa = 'ESTUDIANTIL' | 'DOCENTE'
 
@@ -53,6 +53,13 @@ export interface Mesa {
   votosRegistrados: number
   votosPorCandidato: Record<string, number>
   actaFotoUrl: string | null
+  pizarraFotoUrl: string | null
+  controlCalidadId: string | null
+  controlCalidadNombre: string | null
+  revisionEstado: 'PENDIENTE' | 'APROBADA' | 'RECHAZADA' | null
+  revisionComentario: string | null
+  revisadoPorNombre: string | null
+  revisadoEn: string | null
   observaciones: string | null
   updatedAt: string
 }
@@ -94,6 +101,8 @@ export interface CandidatoResultado {
 export interface ResumenVotos {
   conteoAbierto: boolean
   ultimaActualizacion: string
+  vuelta: number
+  vueltaActual: number
   mesasCargadas: number
   totalMesas: number
   totalVotosEstudiantiles: number
@@ -125,6 +134,7 @@ export interface Asignacion {
 export interface Configuracion {
   id: number
   conteoAbierto: boolean
+  vuelta: number
   updatedAt: string
 }
 
@@ -136,11 +146,22 @@ export interface ResetSistemaResult {
   fecha: string
 }
 
+export interface IniciarSegundaVueltaResult {
+  vuelta: number
+  mesasReseteadas: number
+  ejecutadoPor: string
+  fecha: string
+}
+
+export type TipoResetLog = 'PUESTA_EN_CERO' | 'AVANCE_VUELTA'
+
 export interface ResetLogEntry {
   id: string
   mesasReseteadas: number
   votosEliminados: number
   actasEliminadas: number
+  tipo: TipoResetLog
+  vuelta: number
   createdAt: string
   ejecutadoPor: { name: string; username: string }
 }

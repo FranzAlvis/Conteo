@@ -53,7 +53,8 @@
 
 /* Perfect Print Styles for Official USFX Reports */
 @media print {
-  header, nav, aside, main, footer, button, input, [data-radix-portal], .no-print {
+  header, nav, aside, main, footer, button, input, a,
+  [data-slot='sidebar'], [data-slot='dialog-overlay'], [data-slot='dialog-content'], .no-print {
     display: none !important;
   }
 
@@ -68,15 +69,18 @@
 
   #printable-area {
     display: block !important;
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
+    position: static !important;
     width: 100% !important;
     background: #ffffff !important;
     color: #000000 !important;
     margin: 0 !important;
     padding: 0 !important;
     border: none !important;
+  }
+
+  /* Evita que una fila de tabla quede cortada entre dos hojas */
+  #printable-area tr {
+    break-inside: avoid;
   }
 
   #printable-area table {

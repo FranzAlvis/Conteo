@@ -73,11 +73,12 @@ async function main() {
   });
 
   // 3. Usuarios por defecto
-  const [passwordHashAdmin, passwordHashTrans, passwordHashVisor] =
+  const [passwordHashAdmin, passwordHashTrans, passwordHashVisor, passwordHashQa] =
     await Promise.all([
       bcrypt.hash('admin123', 10),
       bcrypt.hash('trans123', 10),
       bcrypt.hash('visor123', 10),
+      bcrypt.hash('qa123', 10),
     ]);
 
   const admin = await prisma.user.create({
@@ -124,7 +125,40 @@ async function main() {
     },
   });
 
-  console.log('✅ Usuarios creados (admin, transcriptores, visor)');
+  const controlCalidadUsers = await Promise.all([
+    prisma.user.create({
+      data: {
+        name: 'Rosa Ximena Delgado (Control de Calidad 1)',
+        username: 'control_calidad1',
+        passwordHash: passwordHashQa,
+        role: 'CONTROL_CALIDAD',
+        telefono: '72233445',
+        isActive: true,
+      },
+    }),
+    prisma.user.create({
+      data: {
+        name: 'Marco Antonio Salazar (Control de Calidad 2)',
+        username: 'control_calidad2',
+        passwordHash: passwordHashQa,
+        role: 'CONTROL_CALIDAD',
+        telefono: '72233446',
+        isActive: true,
+      },
+    }),
+    prisma.user.create({
+      data: {
+        name: 'Lucía Fernanda Ortiz (Control de Calidad 3)',
+        username: 'control_calidad3',
+        passwordHash: passwordHashQa,
+        role: 'CONTROL_CALIDAD',
+        telefono: '72233447',
+        isActive: true,
+      },
+    }),
+  ]);
+
+  console.log('✅ Usuarios creados (admin, transcriptores, visor, control de calidad)');
 
   // 4. Cargo y candidatos
   const cargoVicerrector = await prisma.cargo.create({
@@ -135,7 +169,7 @@ async function main() {
     },
   });
 
-  const [yamile, villalpando, encinas, espada, blancos] = await Promise.all([
+  const [yamile, villalpando, encinas, blancos] = await Promise.all([
     prisma.candidato.create({
       data: {
         nombre: 'Maria Yamile Hayes Michel',
@@ -155,14 +189,6 @@ async function main() {
     prisma.candidato.create({
       data: {
         nombre: 'Guido Marcelo Encinas Pasquier',
-        lista: 'Postulante a Vicerrectorado 2026',
-        cargoId: cargoVicerrector.id,
-        esPropio: false,
-      },
-    }),
-    prisma.candidato.create({
-      data: {
-        nombre: 'Freddy David Espada Rivera',
         lista: 'Postulante a Vicerrectorado 2026',
         cargoId: cargoVicerrector.id,
         esPropio: false,
@@ -222,6 +248,25 @@ async function main() {
 
   console.log(
     `✅ ${mesasCsv.length} mesas estudiantiles + 1 mesa docente registradas`,
+  );
+
+  // 5.5 Reparto automático de mesas entre control de calidad (mismo criterio
+  // que ControlCalidadService.redistribuir: parejo entre los activos; acá en
+  // frío, sin revisiones previas, un simple round-robin ya queda equilibrado).
+  const todasLasMesas = await prisma.mesa.findMany({
+    orderBy: { codigo: 'asc' },
+    select: { id: true },
+  });
+  await prisma.$transaction(
+    todasLasMesas.map((m, i) =>
+      prisma.mesa.update({
+        where: { id: m.id },
+        data: { controlCalidadId: controlCalidadUsers[i % controlCalidadUsers.length].id },
+      }),
+    ),
+  );
+  console.log(
+    `✅ ${todasLasMesas.length} mesas repartidas entre ${controlCalidadUsers.length} usuarios de control de calidad`,
   );
 
   // 6. Ejemplo de flujo ya transcrito, en edición y pendiente para demo/QA
@@ -292,7 +337,6 @@ async function main() {
       { mesaId: mesa1.id, candidatoId: yamile.id, cantidad: 130 },
       { mesaId: mesa1.id, candidatoId: villalpando.id, cantidad: 70 },
       { mesaId: mesa1.id, candidatoId: encinas.id, cantidad: 30 },
-      { mesaId: mesa1.id, candidatoId: espada.id, cantidad: 15 },
       { mesaId: mesa1.id, candidatoId: blancos.id, cantidad: 5 },
     ],
   });
@@ -302,14 +346,23 @@ async function main() {
       { mesaId: mesaDocente.id, candidatoId: yamile.id, cantidad: 30 },
       { mesaId: mesaDocente.id, candidatoId: villalpando.id, cantidad: 15 },
       { mesaId: mesaDocente.id, candidatoId: encinas.id, cantidad: 5 },
-      { mesaId: mesaDocente.id, candidatoId: espada.id, cantidad: 8 },
       { mesaId: mesaDocente.id, candidatoId: blancos.id, cantidad: 2 },
+    ],
+  });
+
+  // Las mesas de ejemplo ya "Cargadas" quedan pendientes de revisión para su
+  // control de calidad asignado (el seed no pasa por VotosService.transcribir,
+  // que es quien crea esta fila normalmente al transcribir de verdad).
+  await prisma.revisionMesa.createMany({
+    data: [
+      { mesaId: mesa1.id, vuelta: 1 },
+      { mesaId: mesaDocente.id, vuelta: 1 },
     ],
   });
 
   console.log('✅ Votos iniciales registrados en mesas de ejemplo');
   console.log(
-    `🎉 Seed completado: ${mesasCsv.length + 1} mesas, ${facultadesPorNombre.size} facultades, admin=${admin.username}`,
+    `🎉 Seed completado: ${mesasCsv.length + 1} mesas, ${facultadesPorNombre.size} facultades, admin=${admin.username}, control_calidad=[${controlCalidadUsers.map((u) => u.username).join(', ')}] (clave: qa123)`,
   );
 }
 

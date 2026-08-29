@@ -62,7 +62,7 @@ const userSchema = z.object({
   name: z.string().min(1, 'El nombre es obligatorio'),
   username: z.string().min(1, 'El usuario es obligatorio'),
   telefono: z.string().min(1, 'El teléfono es obligatorio'),
-  role: z.enum(['ADMIN', 'TRANSCRIPTOR', 'AYUDANTE', 'VISOR']),
+  role: z.enum(['ADMIN', 'TRANSCRIPTOR', 'AYUDANTE', 'VISOR', 'CONTROL_CALIDAD']),
   password: z.string().optional(),
 })
 
@@ -317,7 +317,9 @@ export function UsersFeature() {
                                   ? 'bg-primary/10 text-primary border-primary/30'
                                   : u.role === 'TRANSCRIPTOR'
                                     ? 'bg-purple-500/10 text-purple-600 border-purple-500/30'
-                                    : 'bg-slate-500/10 text-slate-600 border-slate-500/30'
+                                    : u.role === 'CONTROL_CALIDAD'
+                                      ? 'bg-teal-500/10 text-teal-600 border-teal-500/30'
+                                      : 'bg-slate-500/10 text-slate-600 border-slate-500/30'
                               }`}
                             >
                               {u.role}
@@ -488,6 +490,7 @@ export function UsersFeature() {
                   <SelectItem value='ADMIN' className='text-xs font-bold text-primary'>ADMIN (Acceso total)</SelectItem>
                   <SelectItem value='TRANSCRIPTOR' className='text-xs'>TRANSCRIPTOR (Carga de mesas asignadas)</SelectItem>
                   <SelectItem value='AYUDANTE' className='text-xs'>AYUDANTE (Apoyo técnico)</SelectItem>
+                  <SelectItem value='CONTROL_CALIDAD' className='text-xs'>CONTROL DE CALIDAD (Revisión de actas)</SelectItem>
                   <SelectItem value='VISOR' className='text-xs'>VISOR (Solo consulta live)</SelectItem>
                 </SelectContent>
               </Select>

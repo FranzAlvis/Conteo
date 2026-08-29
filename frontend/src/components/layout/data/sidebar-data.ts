@@ -8,6 +8,7 @@ import {
   FileSpreadsheet,
   Share2,
   ClipboardCheck,
+  ShieldCheck,
 } from 'lucide-react'
 import { type SidebarData } from '../types'
 
@@ -47,6 +48,11 @@ export const sidebarData: SidebarData = {
           title: 'Transcripción de Actas',
           url: '/transcripcion',
           icon: FileSpreadsheet,
+        },
+        {
+          title: 'Control de Calidad',
+          url: '/control-calidad',
+          icon: ShieldCheck,
         },
       ],
     },

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { resultadosApi } from '@/lib/api/resultados'
+import { configuracionApi } from '@/lib/api/configuracion'
 import type { CandidatoResultado } from '@/lib/api/types'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
@@ -10,15 +11,27 @@ import { LiveStatusBadge } from '@/components/live-status-badge'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Radio, Vote, Trophy, Activity, GraduationCap, Award, Zap } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Radio, Vote, Trophy, Activity, GraduationCap, Award, Zap, History } from 'lucide-react'
 import { CandidatosChart } from '../dashboard/components/candidatos-chart'
 
 export function ResultadosFeature() {
+  const { data: configuracion } = useQuery({
+    queryKey: ['configuracion'],
+    queryFn: configuracionApi.get,
+  })
+  const vueltaActual = configuracion?.vuelta ?? 1
+
+  const [vueltaSeleccionada, setVueltaSeleccionada] = useState<number | undefined>(undefined)
+  const vueltaVista = vueltaSeleccionada ?? vueltaActual
+
   const { data, isPending } = useQuery({
-    queryKey: ['resultados'],
-    queryFn: resultadosApi.get,
+    queryKey: ['resultados', vueltaSeleccionada],
+    queryFn: () => resultadosApi.get(vueltaSeleccionada),
     refetchInterval: 15_000,
   })
+
+  const esHistorico = vueltaVista !== vueltaActual
 
   const [activeSector, setActiveSector] = useState<'ponderado' | 'estudiantil' | 'docente'>('ponderado')
 
@@ -70,6 +83,34 @@ export function ResultadosFeature() {
       </Header>
 
       <Main className='space-y-6 p-4 sm:p-6'>
+        {vueltaActual > 1 && (
+          <div className='flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-card p-3 rounded-xl border shadow-xs'>
+            <div className='flex items-center gap-2'>
+              <span className='text-xs font-bold text-muted-foreground'>Ver resultados de:</span>
+              <Tabs
+                value={String(vueltaVista)}
+                onValueChange={(val) => {
+                  const v = Number(val)
+                  setVueltaSeleccionada(v === vueltaActual ? undefined : v)
+                }}
+              >
+                <TabsList className='h-8'>
+                  {Array.from({ length: vueltaActual }, (_, i) => i + 1).map((v) => (
+                    <TabsTrigger key={v} value={String(v)} className='text-xs px-3'>
+                      Vuelta {v}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            </div>
+            {esHistorico && (
+              <Badge variant='outline' className='text-[10px] font-bold gap-1 text-amber-700 border-amber-500/40'>
+                <History className='h-3 w-3' /> Resultados históricos (vuelta cerrada, solo lectura)
+              </Badge>
+            )}
+          </div>
+        )}
+
         <div className='flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-card p-3 rounded-xl border shadow-xs'>
           <div>
             <h2 className='text-xl font-extrabold tracking-tight flex items-center gap-2'>

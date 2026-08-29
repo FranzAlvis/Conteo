@@ -120,12 +120,6 @@ async function main() {
         esPropio: false,
       },
       {
-        nombre: 'Freddy David Espada Rivera',
-        lista: 'Postulante a Vicerrectorado 2026',
-        cargoId: cargoVicerrector.id,
-        esPropio: false,
-      },
-      {
         nombre: 'Votos En Blanco / Nulos',
         lista: 'N/A',
         cargoId: cargoVicerrector.id,

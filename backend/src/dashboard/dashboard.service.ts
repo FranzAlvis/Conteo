@@ -9,9 +9,9 @@ export class DashboardService {
     private readonly mesasService: MesasService,
   ) {}
 
-  async getResumenGeneral() {
+  async getResumenGeneral(vuelta?: number) {
     const [resumen, mesasRecientes] = await Promise.all([
-      this.resultadosService.computeResumen(),
+      this.resultadosService.computeResumen(vuelta),
       this.mesasService.findRecientes(5),
     ]);
     return { ...resumen, mesasRecientes };

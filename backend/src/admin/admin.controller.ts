@@ -5,6 +5,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { AuthenticatedUser } from '../common/types/authenticated-user';
 import { AdminService } from './admin.service';
 import { ResetSistemaDto } from './dto/reset-sistema.dto';
+import { IniciarSegundaVueltaDto } from './dto/iniciar-segunda-vuelta.dto';
 
 @Controller('admin')
 @Roles(Role.ADMIN)
@@ -17,6 +18,14 @@ export class AdminController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.adminService.resetSistema(dto, user);
+  }
+
+  @Post('iniciar-segunda-vuelta')
+  iniciarSegundaVuelta(
+    @Body() dto: IniciarSegundaVueltaDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.adminService.iniciarSegundaVuelta(dto, user);
   }
 
   @Get('reset-log')

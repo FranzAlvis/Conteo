@@ -12,6 +12,10 @@ export class CandidatoResultadoDto {
 export class ResumenVotosDto {
   conteoAbierto: boolean;
   ultimaActualizacion: string;
+  /** Vuelta a la que corresponden estos resultados. */
+  vuelta: number;
+  /** Vuelta activa del proceso electoral (puede diferir de `vuelta` al consultar un histórico). */
+  vueltaActual: number;
   mesasCargadas: number;
   totalMesas: number;
   totalVotosEstudiantiles: number;

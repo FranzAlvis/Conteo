@@ -10,6 +10,7 @@ import { EventsGateway } from '../events/events.gateway';
 import { MesasService } from '../mesas/mesas.service';
 import { MesaResponseDto } from '../mesas/dto/mesa-response.dto';
 import { ResultadosService } from '../resultados/resultados.service';
+import { ConfiguracionService } from '../configuracion/configuracion.service';
 import { TranscribirMesaDto } from './dto/transcribir-mesa.dto';
 
 @Injectable()
@@ -20,6 +21,7 @@ export class VotosService {
     private readonly prisma: PrismaService,
     private readonly mesasService: MesasService,
     private readonly resultadosService: ResultadosService,
+    private readonly configuracionService: ConfiguracionService,
     private readonly eventsGateway: EventsGateway,
   ) {}
 
@@ -56,18 +58,25 @@ export class VotosService {
       );
     }
 
+    const { vuelta } = await this.configuracionService.getOrCreate();
+
     await this.prisma.$transaction(async (tx) => {
       await Promise.all(
         dto.votos.map((v) =>
           tx.votoMesa.upsert({
             where: {
-              mesaId_candidatoId: { mesaId, candidatoId: v.candidatoId },
+              mesaId_candidatoId_vuelta: {
+                mesaId,
+                candidatoId: v.candidatoId,
+                vuelta,
+              },
             },
             update: { cantidad: v.cantidad },
             create: {
               mesaId,
               candidatoId: v.candidatoId,
               cantidad: v.cantidad,
+              vuelta,
             },
           }),
         ),
@@ -86,11 +95,39 @@ export class VotosService {
           data: {
             mesaId,
             fotoUrl: dto.actaFotoUrl,
+            tipo: 'ACTA',
             observaciones: dto.observaciones,
             subidoPorId: currentUser.id,
+            vuelta,
           },
         });
       }
+
+      if (dto.pizarraFotoUrl) {
+        await tx.actaMesa.create({
+          data: {
+            mesaId,
+            fotoUrl: dto.pizarraFotoUrl,
+            tipo: 'PIZARRA',
+            observaciones: dto.observaciones,
+            subidoPorId: currentUser.id,
+            vuelta,
+          },
+        });
+      }
+
+      // Cada (re)transcripción vuelve a dejar la mesa pendiente de revisión
+      // por control de calidad, borrando cualquier veredicto anterior.
+      await tx.revisionMesa.upsert({
+        where: { mesaId_vuelta: { mesaId, vuelta } },
+        update: {
+          estado: 'PENDIENTE',
+          comentario: null,
+          revisadoPorId: null,
+          revisadoEn: null,
+        },
+        create: { mesaId, vuelta },
+      });
     });
 
     const mesaActualizada = await this.mesasService.findOne(mesaId);

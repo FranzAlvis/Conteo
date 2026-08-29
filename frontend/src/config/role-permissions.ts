@@ -10,6 +10,7 @@ export const APP_ROUTES = [
   '/resultados',
   '/estado-mesas',
   '/transcripcion',
+  '/control-calidad',
   '/mesas',
   '/delegados',
   '/users',
@@ -25,6 +26,7 @@ export const ROLE_ROUTES: Record<Role, AppRoute[]> = {
   TRANSCRIPTOR: ['/transcripcion', '/asignaciones'],
   AYUDANTE: ['/transcripcion', '/asignaciones'],
   VISOR: ['/resultados', '/estado-mesas'],
+  CONTROL_CALIDAD: ['/control-calidad'],
 }
 
 /** Página a la que se redirige a cada rol al entrar a "/" o a una ruta sin permiso. */
@@ -33,6 +35,7 @@ export const ROLE_DEFAULT_ROUTE: Record<Role, AppRoute> = {
   TRANSCRIPTOR: '/transcripcion',
   AYUDANTE: '/transcripcion',
   VISOR: '/resultados',
+  CONTROL_CALIDAD: '/control-calidad',
 }
 
 export function canAccessRoute(role: Role | undefined, route: AppRoute): boolean {

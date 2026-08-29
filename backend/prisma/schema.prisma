@@ -12,6 +12,13 @@ enum Role {
   TRANSCRIPTOR
   AYUDANTE
   VISOR
+  CONTROL_CALIDAD
+}
+
+enum EstadoRevision {
+  PENDIENTE
+  APROBADA
+  RECHAZADA
 }
 
 enum EstadoMesa {
@@ -23,6 +30,16 @@ enum EstadoMesa {
 enum TipoMesa {
   ESTUDIANTIL
   DOCENTE
+}
+
+enum TipoReset {
+  PUESTA_EN_CERO
+  AVANCE_VUELTA
+}
+
+enum TipoActa {
+  ACTA
+  PIZARRA
 }
 
 model User {
@@ -37,9 +54,11 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  mesasAsignadas     Mesa[]            @relation("TranscriptorMesas")
-  actasSubidas       ActaMesa[]
-  reseteosEjecutados ResetAuditoria[]
+  mesasAsignadas       Mesa[]           @relation("TranscriptorMesas")
+  mesasControlCalidad  Mesa[]           @relation("ControlCalidadMesas")
+  actasSubidas         ActaMesa[]
+  reseteosEjecutados   ResetAuditoria[]
+  revisionesRealizadas RevisionMesa[]
 
   @@map("users")
 }
@@ -85,27 +104,31 @@ model Candidato {
 }
 
 model Mesa {
-  id             String     @id @default(uuid())
-  codigo         String     @unique
-  facultadId     String
-  facultad       Facultad   @relation(fields: [facultadId], references: [id])
-  ubicacion      String     @default("Por definir")
-  totalPadron    Int        @default(0)
-  tipo           TipoMesa   @default(ESTUDIANTIL)
-  ponderacion    Int        @default(1)
-  estado         EstadoMesa @default(PENDIENTE)
-  transcriptorId String?
-  transcriptor   User?      @relation("TranscriptorMesas", fields: [transcriptorId], references: [id])
-  observaciones  String?
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  id               String     @id @default(uuid())
+  codigo           String     @unique
+  facultadId       String
+  facultad         Facultad   @relation(fields: [facultadId], references: [id])
+  ubicacion        String     @default("Por definir")
+  totalPadron      Int        @default(0)
+  tipo             TipoMesa   @default(ESTUDIANTIL)
+  ponderacion      Int        @default(1)
+  estado           EstadoMesa @default(PENDIENTE)
+  transcriptorId   String?
+  transcriptor     User?      @relation("TranscriptorMesas", fields: [transcriptorId], references: [id])
+  controlCalidadId String?
+  controlCalidad   User?      @relation("ControlCalidadMesas", fields: [controlCalidadId], references: [id])
+  observaciones    String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
 
-  votos     VotoMesa[]
-  actas     ActaMesa[]
-  delegados Delegado[]
+  votos      VotoMesa[]
+  actas      ActaMesa[]
+  delegados  Delegado[]
+  revisiones RevisionMesa[]
 
   @@index([facultadId])
   @@index([transcriptorId])
+  @@index([controlCalidadId])
   @@index([estado])
   @@map("mesas")
 }
@@ -135,8 +158,9 @@ model VotoMesa {
   candidatoId String
   candidato   Candidato @relation(fields: [candidatoId], references: [id], onDelete: Cascade)
   cantidad    Int       @default(0)
+  vuelta      Int       @default(1)
 
-  @@unique([mesaId, candidatoId])
+  @@unique([mesaId, candidatoId, vuelta])
   @@map("votos_mesa")
 }
 
@@ -145,33 +169,58 @@ model ActaMesa {
   mesaId        String
   mesa          Mesa     @relation(fields: [mesaId], references: [id], onDelete: Cascade)
   fotoUrl       String
+  tipo          TipoActa @default(ACTA)
   observaciones String?
   subidoPorId   String
   subidoPor     User     @relation(fields: [subidoPorId], references: [id])
+  vuelta        Int      @default(1)
   createdAt     DateTime @default(now())
 
   @@index([mesaId])
   @@map("actas_mesa")
 }
 
+/// Veredicto de control de calidad sobre la transcripción de una mesa en una vuelta.
+/// Se resetea a PENDIENTE cada vez que el transcriptor vuelve a subir la mesa.
+model RevisionMesa {
+  id            String         @id @default(uuid())
+  mesaId        String
+  mesa          Mesa           @relation(fields: [mesaId], references: [id], onDelete: Cascade)
+  vuelta        Int            @default(1)
+  estado        EstadoRevision @default(PENDIENTE)
+  comentario    String?
+  revisadoPorId String?
+  revisadoPor   User?          @relation(fields: [revisadoPorId], references: [id])
+  revisadoEn    DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([mesaId, vuelta])
+  @@index([mesaId])
+  @@map("revisiones_mesa")
+}
+
 /// Fila única de configuración global del proceso electoral
 model Configuracion {
   id            Int      @id @default(1)
   conteoAbierto Boolean  @default(true)
+  vuelta        Int      @default(1)
   updatedAt     DateTime @updatedAt
 
   @@map("configuracion")
 }
 
-/// Registro de auditoría de cada "puesta en 0" del sistema (acción irreversible, solo ADMIN)
+/// Registro de auditoría de cada "puesta en 0" o avance de vuelta del sistema (acción irreversible, solo ADMIN)
 model ResetAuditoria {
-  id              String   @id @default(uuid())
+  id              String    @id @default(uuid())
   ejecutadoPorId  String
-  ejecutadoPor    User     @relation(fields: [ejecutadoPorId], references: [id])
+  ejecutadoPor    User      @relation(fields: [ejecutadoPorId], references: [id])
   mesasReseteadas Int
   votosEliminados Int
   actasEliminadas Int
-  createdAt       DateTime @default(now())
+  tipo            TipoReset @default(PUESTA_EN_CERO)
+  vuelta          Int       @default(1)
+  createdAt       DateTime  @default(now())
 
   @@index([ejecutadoPorId])
   @@map("reset_auditoria")

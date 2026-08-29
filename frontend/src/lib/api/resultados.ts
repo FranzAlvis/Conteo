@@ -2,5 +2,8 @@ import { apiClient } from '@/lib/api-client'
 import type { ResumenVotos } from './types'
 
 export const resultadosApi = {
-  get: () => apiClient.get<ResumenVotos>('/resultados').then((res) => res.data),
+  get: (vuelta?: number) =>
+    apiClient
+      .get<ResumenVotos>('/resultados', { params: vuelta ? { vuelta } : undefined })
+      .then((res) => res.data),
 }

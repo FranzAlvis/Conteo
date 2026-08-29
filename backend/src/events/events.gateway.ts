@@ -61,4 +61,9 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   notificarSistemaReseteado() {
     this.server.to('todos').emit('sistemaReseteado');
   }
+
+  // Notificación global de avance a una nueva vuelta electoral (A todos, para refrescar toda la caché local)
+  notificarVueltaAvanzada(vuelta: number) {
+    this.server.to('todos').emit('vueltaAvanzada', { vuelta });
+  }
 }

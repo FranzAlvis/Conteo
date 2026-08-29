@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { dashboardApi } from '@/lib/api/dashboard'
 import { Header } from '@/components/layout/header'
@@ -9,16 +10,23 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Vote, Users, Activity, ShieldAlert } from 'lucide-react'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Vote, Users, Activity, ShieldAlert, History } from 'lucide-react'
 import { CandidatosChart } from './components/candidatos-chart'
 import { RecentMesasTable } from './components/recent-mesas-table'
 
 export function Dashboard() {
+  const [vueltaSeleccionada, setVueltaSeleccionada] = useState<number | undefined>(undefined)
+
   const { data, isPending } = useQuery({
-    queryKey: ['dashboard'],
-    queryFn: dashboardApi.get,
+    queryKey: ['dashboard', vueltaSeleccionada],
+    queryFn: () => dashboardApi.get(vueltaSeleccionada),
     refetchInterval: 30_000,
   })
+
+  const vueltaActual = data?.vueltaActual ?? 1
+  const vueltaVista = vueltaSeleccionada ?? vueltaActual
+  const esHistorico = vueltaVista !== vueltaActual
 
   const mesasCargadas = data?.mesasCargadas ?? 0
   const totalMesas = data?.totalMesas ?? 0
@@ -47,6 +55,34 @@ export function Dashboard() {
 
       {/* ===== Main Content ===== */}
       <Main className='space-y-6 p-4 sm:p-6'>
+        {vueltaActual > 1 && (
+          <div className='flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-card p-3 rounded-xl border shadow-xs'>
+            <div className='flex items-center gap-2'>
+              <span className='text-xs font-bold text-muted-foreground'>Ver dashboard de:</span>
+              <Tabs
+                value={String(vueltaVista)}
+                onValueChange={(val) => {
+                  const v = Number(val)
+                  setVueltaSeleccionada(v === vueltaActual ? undefined : v)
+                }}
+              >
+                <TabsList className='h-8'>
+                  {Array.from({ length: vueltaActual }, (_, i) => i + 1).map((v) => (
+                    <TabsTrigger key={v} value={String(v)} className='text-xs px-3'>
+                      Vuelta {v}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            </div>
+            {esHistorico && (
+              <Badge variant='outline' className='text-[10px] font-bold gap-1 text-amber-700 border-amber-500/40'>
+                <History className='h-3 w-3' /> Datos históricos (vuelta cerrada, solo lectura)
+              </Badge>
+            )}
+          </div>
+        )}
+
         {/* Banner Alert for Status */}
         <div className='flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border border-primary/20 bg-primary/5 gap-3 shadow-sm'>
           <div className='flex items-center gap-3'>

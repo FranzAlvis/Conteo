@@ -7,8 +7,11 @@ import { EventsGateway } from '../events/events.gateway';
 import { ResultadosService } from '../resultados/resultados.service';
 import { ResetSistemaDto } from './dto/reset-sistema.dto';
 import { ResetSistemaResponseDto } from './dto/reset-sistema-response.dto';
+import { IniciarSegundaVueltaDto } from './dto/iniciar-segunda-vuelta.dto';
+import { IniciarSegundaVueltaResponseDto } from './dto/iniciar-segunda-vuelta-response.dto';
 
 const PALABRA_CONFIRMACION = 'REINICIAR';
+const PALABRA_CONFIRMACION_VUELTA = 'SEGUNDA VUELTA';
 
 @Injectable()
 export class AdminService {
@@ -19,9 +22,11 @@ export class AdminService {
   ) {}
 
   /**
-   * Puesta en 0: borra todos los votos y actas cargados, y devuelve cada mesa
-   * a PENDIENTE. Es una acción destructiva e irreversible, por eso exige la
-   * palabra de confirmación además del guard de rol ADMIN.
+   * Puesta en 0: borra los votos y actas cargados de la vuelta activa, y
+   * devuelve cada mesa a PENDIENTE. Es una acción destructiva e irreversible,
+   * por eso exige la palabra de confirmación además del guard de rol ADMIN.
+   * Solo afecta la vuelta en curso: los resultados de vueltas ya cerradas
+   * (p. ej. la primera vuelta tras iniciar la segunda) no se tocan.
    */
   async resetSistema(
     dto: ResetSistemaDto,
@@ -33,14 +38,22 @@ export class AdminService {
       );
     }
 
+    const { vuelta } = await this.prisma.configuracion.upsert({
+      where: { id: 1 },
+      update: {},
+      create: { id: 1 },
+    });
+
     const actasPrevias = await this.prisma.actaMesa.findMany({
+      where: { vuelta },
       select: { fotoUrl: true },
     });
 
     const { votosEliminados, actasEliminadas, mesasReseteadas, auditoria } =
       await this.prisma.$transaction(async (tx) => {
-        const votos = await tx.votoMesa.deleteMany({});
-        const actas = await tx.actaMesa.deleteMany({});
+        const votos = await tx.votoMesa.deleteMany({ where: { vuelta } });
+        const actas = await tx.actaMesa.deleteMany({ where: { vuelta } });
+        await tx.revisionMesa.deleteMany({ where: { vuelta } });
         const mesas = await tx.mesa.updateMany({
           data: { estado: 'PENDIENTE', observaciones: null },
         });
@@ -50,6 +63,8 @@ export class AdminService {
             mesasReseteadas: mesas.count,
             votosEliminados: votos.count,
             actasEliminadas: actas.count,
+            tipo: 'PUESTA_EN_CERO',
+            vuelta,
           },
         });
 
@@ -73,6 +88,69 @@ export class AdminService {
       mesasReseteadas,
       votosEliminados,
       actasEliminadas,
+      ejecutadoPor: currentUser.name,
+      fecha: auditoria.createdAt,
+    };
+  }
+
+  /**
+   * Inicia la segunda vuelta electoral: NO borra los votos ni actas de la
+   * primera vuelta (quedan guardados y consultables por su campo `vuelta`),
+   * solo devuelve cada mesa a PENDIENTE y avanza la ronda activa a 2 para
+   * que las nuevas cargas se registren de forma independiente.
+   */
+  async iniciarSegundaVuelta(
+    dto: IniciarSegundaVueltaDto,
+    currentUser: AuthenticatedUser,
+  ): Promise<IniciarSegundaVueltaResponseDto> {
+    if (dto.confirmacion !== PALABRA_CONFIRMACION_VUELTA) {
+      throw new BadRequestException(
+        `Debe escribir "${PALABRA_CONFIRMACION_VUELTA}" para confirmar el avance de vuelta`,
+      );
+    }
+
+    const configuracion = await this.prisma.configuracion.upsert({
+      where: { id: 1 },
+      update: {},
+      create: { id: 1 },
+    });
+    if (configuracion.vuelta >= 2) {
+      throw new BadRequestException('La segunda vuelta ya fue iniciada');
+    }
+
+    const nuevaVuelta = configuracion.vuelta + 1;
+
+    const { mesasReseteadas, auditoria } = await this.prisma.$transaction(
+      async (tx) => {
+        const mesas = await tx.mesa.updateMany({
+          data: { estado: 'PENDIENTE', observaciones: null },
+        });
+        await tx.configuracion.update({
+          where: { id: 1 },
+          data: { vuelta: nuevaVuelta },
+        });
+        const auditoria = await tx.resetAuditoria.create({
+          data: {
+            ejecutadoPorId: currentUser.id,
+            mesasReseteadas: mesas.count,
+            votosEliminados: 0,
+            actasEliminadas: 0,
+            tipo: 'AVANCE_VUELTA',
+            vuelta: nuevaVuelta,
+          },
+        });
+
+        return { mesasReseteadas: mesas.count, auditoria };
+      },
+    );
+
+    const resumen = await this.resultadosService.computeResumen();
+    this.eventsGateway.notificarResumenVotos(resumen);
+    this.eventsGateway.notificarVueltaAvanzada(nuevaVuelta);
+
+    return {
+      vuelta: nuevaVuelta,
+      mesasReseteadas,
       ejecutadoPor: currentUser.name,
       fecha: auditoria.createdAt,
     };

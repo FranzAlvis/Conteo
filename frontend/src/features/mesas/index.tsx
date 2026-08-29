@@ -2,9 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { facultadesApi } from '@/lib/api/facultades'
 import { mesasApi } from '@/lib/api/mesas'
-import { candidatosApi } from '@/lib/api/candidatos'
 import { usersApi } from '@/lib/api/users'
-import { actasApi } from '@/lib/api/actas'
 import type { Mesa, TipoMesa } from '@/lib/api/types'
 import { handleServerError } from '@/lib/handle-server-error'
 import { Header } from '@/components/layout/header'
@@ -45,17 +43,16 @@ import {
   Search,
   PlusCircle,
   Vote,
-  Upload,
   CheckCircle2,
   Clock,
   AlertCircle,
-  FileText,
   Lock,
   FilterX,
   Building2,
   Plus,
   UserCheck,
   MessageSquare,
+  Printer,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useForm } from 'react-hook-form'
@@ -73,8 +70,6 @@ const crearFacultadSchema = z.object({
   nombre: z.string().min(1, 'El nombre de la facultad es requerido'),
 })
 
-const LIMITE_VOTOS_MESA = 2000
-
 export function MesasFeature() {
   const queryClient = useQueryClient()
   const [searchTerm, setSearchTerm] = useState('')
@@ -84,12 +79,9 @@ export function MesasFeature() {
   // Modals
   const [openCrearMesaModal, setOpenCrearMesaModal] = useState(false)
   const [openCrearFacultadModal, setOpenCrearFacultadModal] = useState(false)
-  const [openTranscribirModal, setOpenTranscribirModal] = useState(false)
   const [facultadModalId, setFacultadModalId] = useState<string | null>(null)
-  const [mesaATranscribirId, setMesaATranscribirId] = useState('')
-  const [votosMap, setVotosMap] = useState<Record<string, number>>({})
-  const [actaFile, setActaFile] = useState<File | null>(null)
   const [viendoDelegadoDeMesa, setViendoDelegadoDeMesa] = useState<Mesa | null>(null)
+  const [openReporteFacultadesModal, setOpenReporteFacultadesModal] = useState(false)
 
   const { data: facultades = [], isPending: facultadesPending } = useQuery({
     queryKey: ['facultades'],
@@ -98,10 +90,6 @@ export function MesasFeature() {
   const { data: mesas = [], isPending: mesasPending } = useQuery({
     queryKey: ['mesas'],
     queryFn: () => mesasApi.list(),
-  })
-  const { data: candidatos = [] } = useQuery({
-    queryKey: ['candidatos'],
-    queryFn: () => candidatosApi.list(),
   })
   const { data: transcriptores = [] } = useQuery({
     queryKey: ['transcriptores'],
@@ -141,27 +129,6 @@ export function MesasFeature() {
     onError: handleServerError,
   })
 
-  const transcribirMutation = useMutation({
-    mutationFn: async () => {
-      let actaFotoUrl: string | undefined
-      if (actaFile) actaFotoUrl = await actasApi.upload(actaFile)
-      return mesasApi.transcribir(mesaATranscribirId, {
-        votos: Object.entries(votosMap).map(([candidatoId, cantidad]) => ({ candidatoId, cantidad })),
-        actaFotoUrl,
-      })
-    },
-    onSuccess: (mesa) => {
-      queryClient.invalidateQueries({ queryKey: ['mesas'] })
-      queryClient.invalidateQueries({ queryKey: ['facultades'] })
-      queryClient.invalidateQueries({ queryKey: ['resultados'] })
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-      toast.success(`Acta de ${mesa.codigo} transmitida exitosamente`)
-      setOpenTranscribirModal(false)
-      setActaFile(null)
-    },
-    onError: handleServerError,
-  })
-
   const filteredMesas = mesas.filter((m) => {
     const matchesSearch =
       m.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -189,30 +156,6 @@ export function MesasFeature() {
     crearFacultadMutation.mutate({ nombre: values.nombre })
   }
 
-  const handleOpenTranscribir = () => {
-    const initial: Record<string, number> = {}
-    candidatos.forEach((c) => (initial[c.id] = 0))
-    setVotosMap(initial)
-    setMesaATranscribirId('')
-    setActaFile(null)
-    setOpenTranscribirModal(true)
-  }
-
-  const sumaVotos = Object.values(votosMap).reduce((a, b) => a + (b || 0), 0)
-
-  const onSubmitTranscribir = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!mesaATranscribirId) {
-      toast.error('Seleccione una mesa a transcribir')
-      return
-    }
-    if (sumaVotos > LIMITE_VOTOS_MESA) {
-      toast.error(`La suma de votos (${sumaVotos}) excede el límite permitido por mesa (${LIMITE_VOTOS_MESA})`)
-      return
-    }
-    transcribirMutation.mutate()
-  }
-
   return (
     <>
       <Header>
@@ -228,7 +171,7 @@ export function MesasFeature() {
       </Header>
 
       <Main className='space-y-6 p-4 sm:p-6'>
-        <div className='flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4'>
+        <div className='flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4'>
           <div>
             <h2 className='text-2xl font-bold tracking-tight'>Mesas Electorales USFX</h2>
             <p className='text-xs text-muted-foreground mt-0.5'>
@@ -236,7 +179,15 @@ export function MesasFeature() {
             </p>
           </div>
 
-          <div className='flex flex-wrap items-center gap-2'>
+          <div className='grid grid-cols-1 sm:grid-cols-3 gap-2 w-full xl:w-auto'>
+            <Button
+              onClick={() => setOpenReporteFacultadesModal(true)}
+              variant='outline'
+              className='font-semibold gap-1.5 text-xs border-primary/30 text-primary hover:bg-primary/5'
+            >
+              <Printer className='h-4 w-4' /> Imprimir Mesas por Facultad
+            </Button>
+
             <Button
               onClick={() => setOpenCrearFacultadModal(true)}
               variant='outline'
@@ -251,10 +202,6 @@ export function MesasFeature() {
               className='font-semibold gap-1.5 text-xs border-primary/30 text-primary hover:bg-primary/5'
             >
               <PlusCircle className='h-4 w-4' /> Registrar Nueva Mesa
-            </Button>
-
-            <Button onClick={handleOpenTranscribir} className='font-semibold gap-1.5 shadow-sm text-xs'>
-              <FileText className='h-4 w-4' /> Transcribir Votos / Acta
             </Button>
           </div>
         </div>
@@ -386,7 +333,7 @@ export function MesasFeature() {
                   <SelectContent>
                     <SelectItem value='TODOS'>Todos los estados</SelectItem>
                     <SelectItem value='CARGADA'>Cargada</SelectItem>
-                    <SelectItem value='EN_CARGA'>En Edición</SelectItem>
+                    <SelectItem value='EN_CARGA'>Observada</SelectItem>
                     <SelectItem value='PENDIENTE'>Pendiente</SelectItem>
                   </SelectContent>
                 </Select>
@@ -455,7 +402,7 @@ export function MesasFeature() {
                           )}
                           {m.estado === 'EN_CARGA' && (
                             <Badge variant='outline' className='bg-amber-500/10 text-amber-600 border-amber-500/30 text-[10px] uppercase font-bold gap-1 animate-pulse'>
-                              <Clock className='h-3 w-3' /> En Edición
+                              <Clock className='h-3 w-3' /> Observada
                             </Badge>
                           )}
                           {m.estado === 'PENDIENTE' && (
@@ -589,100 +536,6 @@ export function MesasFeature() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal 3: TRANSCRIBIR ACTA / VOTOS */}
-      <Dialog open={openTranscribirModal} onOpenChange={setOpenTranscribirModal}>
-        <DialogContent className='sm:max-w-md'>
-          <DialogHeader>
-            <DialogTitle className='text-lg font-bold flex items-center gap-2'>
-              <FileText className='h-5 w-5 text-primary' />
-              Transcripción de Acta de Mesa
-            </DialogTitle>
-            <DialogDescription className='text-xs'>
-              Ingrese los resultados del acta de escrutinio de la mesa seleccionada.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={onSubmitTranscribir} className='space-y-4 py-2'>
-            <div className='space-y-1.5'>
-              <Label className='text-xs font-semibold'>Seleccionar Mesa</Label>
-              <Select value={mesaATranscribirId} onValueChange={setMesaATranscribirId}>
-                <SelectTrigger className='text-xs'>
-                  <SelectValue placeholder='Seleccione la mesa a procesar...' />
-                </SelectTrigger>
-                <SelectContent>
-                  {mesas.map((m) => (
-                    <SelectItem key={m.id} value={m.id} className='text-xs'>
-                      {m.codigo} — {m.facultad} ({m.estado})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className='space-y-3 pt-2 border-t border-border/50'>
-              <Label className='text-xs font-semibold text-primary uppercase tracking-wider'>
-                Desglose de Votos por Candidatura
-              </Label>
-
-              <div className='grid grid-cols-2 gap-3'>
-                {candidatos.map((c) => (
-                  <div key={c.id} className='space-y-1'>
-                    <Label className='text-[11px] text-muted-foreground truncate block'>{c.nombre}</Label>
-                    <Input
-                      type='number'
-                      min={0}
-                      value={votosMap[c.id] ?? 0}
-                      onChange={(e) =>
-                        setVotosMap((prev) => ({ ...prev, [c.id]: Math.max(0, parseInt(e.target.value, 10) || 0) }))
-                      }
-                      className='text-xs font-bold'
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className='space-y-1.5 pt-2 border-t border-border/50'>
-              <Label className='text-xs font-semibold flex items-center justify-between'>
-                <span>Foto digital del Acta (Obligatorio)</span>
-                {actaFile && <span className='text-[10px] text-emerald-600 font-bold'>✓ Cargada</span>}
-              </Label>
-              <div className='border-2 border-dashed border-border rounded-lg p-4 text-center bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer'>
-                <input
-                  type='file'
-                  accept='image/*'
-                  className='hidden'
-                  id='acta-file-input'
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) {
-                      setActaFile(file)
-                      toast.info(`Archivo ${file.name} adjuntado`)
-                    }
-                  }}
-                />
-                <label htmlFor='acta-file-input' className='cursor-pointer flex flex-col items-center gap-1'>
-                  <Upload className='h-5 w-5 text-primary' />
-                  <span className='text-xs font-medium text-foreground'>
-                    {actaFile ? actaFile.name : 'Haga clic para subir foto del acta'}
-                  </span>
-                  <span className='text-[10px] text-muted-foreground'>Formatos permitidos: JPG, PNG, WEBP</span>
-                </label>
-              </div>
-            </div>
-
-            <DialogFooter className='pt-2'>
-              <Button type='button' variant='outline' onClick={() => setOpenTranscribirModal(false)} className='text-xs'>
-                Cancelar
-              </Button>
-              <Button type='submit' disabled={transcribirMutation.isPending} className='text-xs font-bold'>
-                Transmitir Votos
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
       {/* Modal: DESGLOSE DE MESAS Y DELEGADOS DE LA FACULTAD SELECCIONADA */}
       <Dialog open={!!facultadModalId} onOpenChange={(open) => !open && setFacultadModalId(null)}>
         <DialogContent className='sm:max-w-3xl max-h-[85vh] overflow-y-auto'>
@@ -733,7 +586,7 @@ export function MesasFeature() {
                       ) : (
                         <AlertCircle className='h-3 w-3' />
                       )}
-                      {isCargada ? 'Cargada' : isEnCarga ? 'En Edición' : 'Pendiente'}
+                      {isCargada ? 'Cargada' : isEnCarga ? 'Observada' : 'Pendiente'}
                     </Badge>
                   </div>
 
@@ -851,6 +704,135 @@ export function MesasFeature() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal Vista Previa en Pantalla: Mesas por Facultad */}
+      <Dialog open={openReporteFacultadesModal} onOpenChange={setOpenReporteFacultadesModal}>
+        <DialogContent className='sm:max-w-2xl max-h-[90vh] overflow-y-auto'>
+          <DialogHeader className='no-print'>
+            <div className='flex items-center justify-between pe-4'>
+              <DialogTitle className='text-lg font-bold flex items-center gap-2'>
+                <Building2 className='h-5 w-5 text-primary' />
+                Vista Previa de Impresión — Mesas por Facultad
+              </DialogTitle>
+              <Button onClick={() => window.print()} className='text-xs font-bold gap-1 bg-primary text-white'>
+                <Printer className='h-4 w-4' /> Imprimir Reporte
+              </Button>
+            </div>
+            <DialogDescription className='text-xs'>
+              Cantidad de mesas habilitadas y procesadas por facultad (USFX 2026).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='p-6 bg-card border rounded-lg space-y-4 text-xs shadow-xs'>
+            <div className='border-b pb-3 text-center space-y-1'>
+              <h2 className='text-sm font-black uppercase text-foreground'>
+                UNIVERSIDAD MAYOR, REAL Y PONTIFICIA DE SAN FRANCISCO XAVIER DE CHUQUISACA
+              </h2>
+              <h3 className='text-sm font-extrabold uppercase text-primary pt-0.5'>
+                ELECCIONES AUTORIDADES UNIVERSITARIAS 2026 — VICERRECTORADO
+              </h3>
+              <p className='text-xs font-bold uppercase text-foreground pt-1 inline-block px-3 py-0.5 bg-muted rounded-sm'>
+                CANTIDAD DE MESAS POR FACULTAD
+              </p>
+            </div>
+
+            <div className='rounded-md border overflow-x-auto'>
+              <table className='w-full text-left text-xs border-collapse'>
+                <thead>
+                  <tr className='bg-muted/60 font-bold uppercase text-[10px] border-b'>
+                    <th className='p-2 border-r text-center w-8'>N°</th>
+                    <th className='p-2 border-r'>Facultad</th>
+                    <th className='p-2 border-r text-center w-24'>Total Mesas</th>
+                    <th className='p-2 border-r text-center w-24'>Cargadas</th>
+                    <th className='p-2 text-center w-24'>Pendientes</th>
+                  </tr>
+                </thead>
+                <tbody className='divide-y'>
+                  {facultades.map((f, index) => (
+                    <tr key={f.id} className='hover:bg-muted/20'>
+                      <td className='p-2 border-r text-center font-bold text-[11px]'>{index + 1}</td>
+                      <td className='p-2 border-r font-bold text-xs'>{f.nombre}</td>
+                      <td className='p-2 border-r text-center font-bold text-xs'>{f.totalMesas}</td>
+                      <td className='p-2 border-r text-center font-bold text-xs'>{f.mesasCargadas}</td>
+                      <td className='p-2 text-center font-bold text-xs'>{f.totalMesas - f.mesasCargadas}</td>
+                    </tr>
+                  ))}
+                  <tr className='bg-muted/40 font-black'>
+                    <td className='p-2 border-r' colSpan={2}>TOTAL</td>
+                    <td className='p-2 border-r text-center'>{facultades.reduce((a, f) => a + f.totalMesas, 0)}</td>
+                    <td className='p-2 border-r text-center'>{facultades.reduce((a, f) => a + f.mesasCargadas, 0)}</td>
+                    <td className='p-2 text-center'>
+                      {facultades.reduce((a, f) => a + (f.totalMesas - f.mesasCargadas), 0)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <DialogFooter className='no-print'>
+            <Button onClick={() => setOpenReporteFacultadesModal(false)} className='text-xs font-bold'>
+              Cerrar Vista Previa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* PRINTABLE AREA CONTAINER */}
+      <div id='printable-area' className='hidden print:block p-6 bg-white text-black font-sans space-y-4 text-xs'>
+        <div className='border-b-2 border-black pb-3 text-center space-y-1'>
+          <h2 className='text-sm font-black uppercase tracking-wider text-black'>
+            UNIVERSIDAD MAYOR, REAL Y PONTIFICIA DE SAN FRANCISCO XAVIER DE CHUQUISACA
+          </h2>
+          <h3 className='text-sm font-extrabold uppercase text-black pt-0.5'>
+            ELECCIONES AUTORIDADES UNIVERSITARIAS 2026 — VICERRECTORADO
+          </h3>
+          <p className='text-xs font-bold uppercase text-black pt-1 bg-gray-100 inline-block px-4 py-0.5 border border-gray-400 rounded-sm'>
+            CANTIDAD DE MESAS POR FACULTAD
+          </p>
+          <div className='flex justify-between items-center text-[10px] text-gray-700 pt-2 font-mono'>
+            <span><strong>Unidad:</strong> Centro de Cómputo Electoral</span>
+            <span><strong>Fecha de Emisión:</strong> {new Date().toLocaleDateString('es-BO')} {new Date().toLocaleTimeString()}</span>
+          </div>
+        </div>
+
+        <table className='w-full text-left border-collapse border border-black text-xs'>
+          <thead>
+            <tr className='bg-gray-200 text-black font-bold uppercase text-[10px] border-b border-black'>
+              <th className='p-2 border border-black text-center w-8'>N°</th>
+              <th className='p-2 border border-black'>Facultad</th>
+              <th className='p-2 border border-black text-center w-24'>Total Mesas</th>
+              <th className='p-2 border border-black text-center w-24'>Cargadas</th>
+              <th className='p-2 border border-black text-center w-24'>Pendientes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {facultades.map((f, index) => (
+              <tr key={f.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                <td className='p-2 border border-black text-center font-bold text-[11px]'>{index + 1}</td>
+                <td className='p-2 border border-black font-bold text-xs text-black'>{f.nombre}</td>
+                <td className='p-2 border border-black text-center font-bold text-xs text-black'>{f.totalMesas}</td>
+                <td className='p-2 border border-black text-center font-bold text-xs text-black'>{f.mesasCargadas}</td>
+                <td className='p-2 border border-black text-center font-bold text-xs text-black'>
+                  {f.totalMesas - f.mesasCargadas}
+                </td>
+              </tr>
+            ))}
+            <tr className='bg-gray-200 font-black'>
+              <td className='p-2 border border-black text-black' colSpan={2}>TOTAL</td>
+              <td className='p-2 border border-black text-center text-black'>
+                {facultades.reduce((a, f) => a + f.totalMesas, 0)}
+              </td>
+              <td className='p-2 border border-black text-center text-black'>
+                {facultades.reduce((a, f) => a + f.mesasCargadas, 0)}
+              </td>
+              <td className='p-2 border border-black text-center text-black'>
+                {facultades.reduce((a, f) => a + (f.totalMesas - f.mesasCargadas), 0)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </>
   )
 }

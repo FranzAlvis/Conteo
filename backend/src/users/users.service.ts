@@ -6,6 +6,7 @@ import {
 import * as bcrypt from 'bcrypt';
 import { User } from '@prisma/client';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { ControlCalidadService } from '../control-calidad/control-calidad.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
@@ -14,7 +15,10 @@ const SALT_ROUNDS = 10;
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly controlCalidadService: ControlCalidadService,
+  ) {}
 
   private toResponse(user: User): UserResponseDto {
     const { id, name, username, role, isActive, avatar, telefono, createdAt } =
@@ -59,6 +63,7 @@ export class UsersService {
         isActive: dto.isActive ?? true,
       },
     });
+    await this.controlCalidadService.redistribuir();
     return this.toResponse(user);
   }
 
@@ -88,12 +93,14 @@ export class UsersService {
           : {}),
       },
     });
+    await this.controlCalidadService.redistribuir();
     return this.toResponse(user);
   }
 
   async remove(id: string): Promise<void> {
     await this.findOne(id);
     await this.prisma.user.delete({ where: { id } });
+    await this.controlCalidadService.redistribuir();
   }
 
   /** Lista liviana de transcriptores activos, usada en asignaciones y formularios de mesa. */

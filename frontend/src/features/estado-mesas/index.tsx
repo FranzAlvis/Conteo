@@ -33,7 +33,7 @@ import {
 const ESTADO_FILTROS: { value: EstadoMesa | 'TODOS'; label: string }[] = [
   { value: 'TODOS', label: 'Todos los estados' },
   { value: 'CARGADA', label: 'Cargadas' },
-  { value: 'EN_CARGA', label: 'En Edición' },
+  { value: 'EN_CARGA', label: 'Observada' },
   { value: 'PENDIENTE', label: 'Pendientes' },
 ]
 
@@ -126,7 +126,7 @@ export function EstadoMesasFeature() {
           <Card className='border-amber-500/30 bg-amber-500/5 shadow-sm'>
             <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
               <CardTitle className='text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400'>
-                En Edición
+                Observadas
               </CardTitle>
               <Clock className='h-4 w-4 text-amber-600 dark:text-amber-400' />
             </CardHeader>
@@ -247,7 +247,7 @@ export function EstadoMesasFeature() {
                       ) : (
                         <AlertCircle className='h-3 w-3' />
                       )}
-                      {isCargada ? 'Cargada' : isEnCarga ? 'En Edición' : 'Pendiente'}
+                      {isCargada ? 'Cargada' : isEnCarga ? 'Observada' : 'Pendiente'}
                     </Badge>
                   </div>
 

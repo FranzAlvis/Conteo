@@ -17,6 +17,7 @@ import { Route as AuthenticatedResultadosRouteImport } from './routes/_authentic
 import { Route as AuthenticatedMesasRouteImport } from './routes/_authenticated/mesas'
 import { Route as AuthenticatedEstadoMesasRouteImport } from './routes/_authenticated/estado-mesas'
 import { Route as AuthenticatedDelegadosRouteImport } from './routes/_authenticated/delegados'
+import { Route as AuthenticatedControlCalidadRouteImport } from './routes/_authenticated/control-calidad'
 import { Route as AuthenticatedConfiguracionRouteImport } from './routes/_authenticated/configuracion'
 import { Route as AuthenticatedAsignacionesRouteImport } from './routes/_authenticated/asignaciones'
 import { Route as errors503RouteImport } from './routes/(errors)/503'
@@ -68,6 +69,12 @@ const AuthenticatedDelegadosRoute = AuthenticatedDelegadosRouteImport.update({
   path: '/delegados',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedControlCalidadRoute =
+  AuthenticatedControlCalidadRouteImport.update({
+    id: '/control-calidad',
+    path: '/control-calidad',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedConfiguracionRoute =
   AuthenticatedConfiguracionRouteImport.update({
     id: '/configuracion',
@@ -127,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/503': typeof errors503Route
   '/asignaciones': typeof AuthenticatedAsignacionesRoute
   '/configuracion': typeof AuthenticatedConfiguracionRoute
+  '/control-calidad': typeof AuthenticatedControlCalidadRoute
   '/delegados': typeof AuthenticatedDelegadosRoute
   '/estado-mesas': typeof AuthenticatedEstadoMesasRoute
   '/mesas': typeof AuthenticatedMesasRoute
@@ -144,6 +152,7 @@ export interface FileRoutesByTo {
   '/503': typeof errors503Route
   '/asignaciones': typeof AuthenticatedAsignacionesRoute
   '/configuracion': typeof AuthenticatedConfiguracionRoute
+  '/control-calidad': typeof AuthenticatedControlCalidadRoute
   '/delegados': typeof AuthenticatedDelegadosRoute
   '/estado-mesas': typeof AuthenticatedEstadoMesasRoute
   '/mesas': typeof AuthenticatedMesasRoute
@@ -164,6 +173,7 @@ export interface FileRoutesById {
   '/(errors)/503': typeof errors503Route
   '/_authenticated/asignaciones': typeof AuthenticatedAsignacionesRoute
   '/_authenticated/configuracion': typeof AuthenticatedConfiguracionRoute
+  '/_authenticated/control-calidad': typeof AuthenticatedControlCalidadRoute
   '/_authenticated/delegados': typeof AuthenticatedDelegadosRoute
   '/_authenticated/estado-mesas': typeof AuthenticatedEstadoMesasRoute
   '/_authenticated/mesas': typeof AuthenticatedMesasRoute
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
     | '/503'
     | '/asignaciones'
     | '/configuracion'
+    | '/control-calidad'
     | '/delegados'
     | '/estado-mesas'
     | '/mesas'
@@ -202,6 +213,7 @@ export interface FileRouteTypes {
     | '/503'
     | '/asignaciones'
     | '/configuracion'
+    | '/control-calidad'
     | '/delegados'
     | '/estado-mesas'
     | '/mesas'
@@ -221,6 +233,7 @@ export interface FileRouteTypes {
     | '/(errors)/503'
     | '/_authenticated/asignaciones'
     | '/_authenticated/configuracion'
+    | '/_authenticated/control-calidad'
     | '/_authenticated/delegados'
     | '/_authenticated/estado-mesas'
     | '/_authenticated/mesas'
@@ -299,6 +312,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDelegadosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/control-calidad': {
+      id: '/_authenticated/control-calidad'
+      path: '/control-calidad'
+      fullPath: '/control-calidad'
+      preLoaderRoute: typeof AuthenticatedControlCalidadRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/configuracion': {
       id: '/_authenticated/configuracion'
       path: '/configuracion'
@@ -368,6 +388,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAsignacionesRoute: typeof AuthenticatedAsignacionesRoute
   AuthenticatedConfiguracionRoute: typeof AuthenticatedConfiguracionRoute
+  AuthenticatedControlCalidadRoute: typeof AuthenticatedControlCalidadRoute
   AuthenticatedDelegadosRoute: typeof AuthenticatedDelegadosRoute
   AuthenticatedEstadoMesasRoute: typeof AuthenticatedEstadoMesasRoute
   AuthenticatedMesasRoute: typeof AuthenticatedMesasRoute
@@ -381,6 +402,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAsignacionesRoute: AuthenticatedAsignacionesRoute,
   AuthenticatedConfiguracionRoute: AuthenticatedConfiguracionRoute,
+  AuthenticatedControlCalidadRoute: AuthenticatedControlCalidadRoute,
   AuthenticatedDelegadosRoute: AuthenticatedDelegadosRoute,
   AuthenticatedEstadoMesasRoute: AuthenticatedEstadoMesasRoute,
   AuthenticatedMesasRoute: AuthenticatedMesasRoute,

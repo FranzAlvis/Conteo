@@ -28,10 +28,15 @@ export class TranscribirMesaDto {
   @Type(() => VotoCandidatoDto)
   votos: VotoCandidatoDto[];
 
-  /** URL devuelta por POST /actas/upload. */
+  /** URL devuelta por POST /actas/upload (foto del acta de escrutinio). */
   @IsOptional()
   @IsString()
   actaFotoUrl?: string;
+
+  /** URL devuelta por POST /actas/upload (foto de la pizarra de resultados). */
+  @IsOptional()
+  @IsString()
+  pizarraFotoUrl?: string;
 
   @IsOptional()
   @IsString()

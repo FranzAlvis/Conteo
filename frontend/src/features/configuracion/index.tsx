@@ -33,14 +33,16 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Settings, PlusCircle, Award, Building, Trash2, ShieldAlert, RotateCcw } from 'lucide-react'
+import { Settings, PlusCircle, Award, Building, Trash2, ShieldAlert, RotateCcw, Vote } from 'lucide-react'
 import { toast } from 'sonner'
 import { ResetSistemaDialog } from './components/reset-sistema-dialog'
+import { IniciarSegundaVueltaDialog } from './components/iniciar-segunda-vuelta-dialog'
 
 export function ConfiguracionFeature() {
   const queryClient = useQueryClient()
   const [openCandidatoModal, setOpenCandidatoModal] = useState(false)
   const [openResetModal, setOpenResetModal] = useState(false)
+  const [openSegundaVueltaModal, setOpenSegundaVueltaModal] = useState(false)
   const [nombreCandidato, setNombreCandidato] = useState('')
   const [nombreLista, setNombreLista] = useState('')
   const [esPropio, setEsPropio] = useState(false)
@@ -109,6 +111,21 @@ export function ConfiguracionFeature() {
     onError: handleServerError,
   })
 
+  const iniciarSegundaVueltaMutation = useMutation({
+    mutationFn: adminApi.iniciarSegundaVuelta,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['mesas'] })
+      queryClient.invalidateQueries({ queryKey: ['asignaciones'] })
+      queryClient.invalidateQueries({ queryKey: ['resultados'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['reset-log'] })
+      queryClient.invalidateQueries({ queryKey: ['configuracion'] })
+      setOpenSegundaVueltaModal(false)
+      toast.success(`Segunda vuelta iniciada: ${data.mesasReseteadas} mesas vueltas a PENDIENTE`)
+    },
+    onError: handleServerError,
+  })
+
   const handleCrearCandidato = (e: React.FormEvent) => {
     e.preventDefault()
     if (!nombreCandidato || !nombreLista) {
@@ -119,6 +136,7 @@ export function ConfiguracionFeature() {
   }
 
   const conteoAbierto = configuracion?.conteoAbierto ?? true
+  const vuelta = configuracion?.vuelta ?? 1
 
   return (
     <>
@@ -142,17 +160,23 @@ export function ConfiguracionFeature() {
               Parametrización de candidatos, cargos y mesas del proceso electoral.
             </p>
           </div>
-          <div className='flex items-center gap-3 bg-card p-2 rounded-lg border shadow-sm'>
-            <Label className='text-xs font-bold text-foreground'>Estado Global del Conteo:</Label>
-            <div className='flex items-center gap-2'>
-              <Switch
-                checked={conteoAbierto}
-                disabled={toggleConteoMutation.isPending}
-                onCheckedChange={(val) => toggleConteoMutation.mutate(val)}
-              />
-              <Badge className={conteoAbierto ? 'bg-emerald-600 text-white' : 'bg-muted-foreground text-white'}>
-                {conteoAbierto ? 'ABIERTO' : 'CERRADO'}
-              </Badge>
+          <div className='flex items-center gap-3'>
+            <Badge variant='outline' className='text-xs font-bold gap-1.5 py-1.5 px-2.5'>
+              <Vote className='h-3.5 w-3.5 text-primary' />
+              Vuelta actual: {vuelta}
+            </Badge>
+            <div className='flex items-center gap-3 bg-card p-2 rounded-lg border shadow-sm'>
+              <Label className='text-xs font-bold text-foreground'>Estado Global del Conteo:</Label>
+              <div className='flex items-center gap-2'>
+                <Switch
+                  checked={conteoAbierto}
+                  disabled={toggleConteoMutation.isPending}
+                  onCheckedChange={(val) => toggleConteoMutation.mutate(val)}
+                />
+                <Badge className={conteoAbierto ? 'bg-emerald-600 text-white' : 'bg-muted-foreground text-white'}>
+                  {conteoAbierto ? 'ABIERTO' : 'CERRADO'}
+                </Badge>
+              </div>
             </div>
           </div>
         </div>
@@ -275,6 +299,33 @@ export function ConfiguracionFeature() {
           </Card>
         </div>
 
+        {/* Avance de Vuelta: solo disponible mientras se cursa la primera vuelta */}
+        {vuelta === 1 && (
+          <Card className='border-amber-500/40 shadow-sm'>
+            <CardHeader className='flex flex-row items-center justify-between pb-2 gap-4'>
+              <div>
+                <CardTitle className='text-base font-bold flex items-center gap-2 text-amber-600'>
+                  <Vote className='h-5 w-5' />
+                  Avance de Vuelta
+                </CardTitle>
+                <CardDescription className='text-xs'>
+                  Si ningún candidato obtiene la mayoría requerida, inicie la segunda
+                  vuelta: los votos y actas de la primera vuelta se conservan intactos y
+                  las mesas vuelven a PENDIENTE para el nuevo conteo.
+                </CardDescription>
+              </div>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => setOpenSegundaVueltaModal(true)}
+                className='text-xs gap-1.5 shrink-0 border-amber-500/50 text-amber-700 hover:bg-amber-500/10'
+              >
+                <Vote className='h-3.5 w-3.5' /> Iniciar Segunda Vuelta
+              </Button>
+            </CardHeader>
+          </Card>
+        )}
+
         {/* Zona de Peligro: Puesta en 0 */}
         <Card className='border-destructive/40 shadow-sm'>
           <CardHeader className='flex flex-row items-center justify-between pb-2 gap-4'>
@@ -301,7 +352,11 @@ export function ConfiguracionFeature() {
           {resetLog.length > 0 && (
             <CardContent>
               <p className='text-xs text-muted-foreground'>
-                Último reinicio: <span className='font-semibold'>{resetLog[0].ejecutadoPor.name}</span>
+                Última acción:{' '}
+                <Badge variant='outline' className='text-[10px] font-bold uppercase mx-1'>
+                  {resetLog[0].tipo === 'AVANCE_VUELTA' ? `Avance a vuelta ${resetLog[0].vuelta}` : 'Puesta en 0'}
+                </Badge>
+                por <span className='font-semibold'>{resetLog[0].ejecutadoPor.name}</span>
                 {' '}
                 el {new Date(resetLog[0].createdAt).toLocaleString()} ·{' '}
                 {resetLog[0].mesasReseteadas} mesas, {resetLog[0].votosEliminados} votos,{' '}
@@ -311,6 +366,13 @@ export function ConfiguracionFeature() {
           )}
         </Card>
       </Main>
+
+      <IniciarSegundaVueltaDialog
+        open={openSegundaVueltaModal}
+        onOpenChange={setOpenSegundaVueltaModal}
+        isLoading={iniciarSegundaVueltaMutation.isPending}
+        onConfirm={() => iniciarSegundaVueltaMutation.mutate('SEGUNDA VUELTA')}
+      />
 
       <ResetSistemaDialog
         open={openResetModal}

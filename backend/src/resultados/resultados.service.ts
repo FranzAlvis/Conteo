@@ -13,22 +13,44 @@ export class ResultadosService {
     private readonly configuracionService: ConfiguracionService,
   ) {}
 
-  async computeResumen(): Promise<ResumenVotosDto> {
-    const [candidatos, votos, mesasAgg, configuracion] = await Promise.all([
-      this.prisma.candidato.findMany({ orderBy: { createdAt: 'asc' } }),
+  async computeResumen(vuelta?: number): Promise<ResumenVotosDto> {
+    const configuracion = await this.configuracionService.getOrCreate();
+    const vueltaConsultada = vuelta ?? configuracion.vuelta;
+
+    // En la ronda activa solo se muestran candidatos vigentes (isActive): si
+    // se dio de baja a alguien por error o quedó eliminado en una vuelta
+    // anterior, no debe seguir apareciendo en el resumen en vivo. En cambio,
+    // al consultar una vuelta ya cerrada se listan TODOS los que compitieron
+    // entonces, aunque luego se hayan desactivado (p. ej. al pasar a un
+    // balotaje), para no perder el histórico de esa ronda.
+    const [candidatos, votos, mesasAgg] = await Promise.all([
+      this.prisma.candidato.findMany({
+        where:
+          vueltaConsultada === configuracion.vuelta
+            ? { isActive: true }
+            : undefined,
+        orderBy: { createdAt: 'asc' },
+      }),
       this.prisma.votoMesa.findMany({
+        where: { vuelta: vueltaConsultada },
         include: { mesa: { select: { tipo: true, ponderacion: true } } },
       }),
       this.prisma.mesa.aggregate({
         _count: { _all: true },
         _sum: { totalPadron: true },
       }),
-      this.configuracionService.getOrCreate(),
     ]);
 
-    const mesasCargadas = await this.prisma.mesa.count({
-      where: { estado: 'CARGADA' },
-    });
+    const mesasCargadas =
+      vueltaConsultada === configuracion.vuelta
+        ? await this.prisma.mesa.count({ where: { estado: 'CARGADA' } })
+        : await this.prisma.votoMesa
+            .findMany({
+              where: { vuelta: vueltaConsultada },
+              distinct: ['mesaId'],
+              select: { mesaId: true },
+            })
+            .then((filas) => filas.length);
 
     const acumuladoPorCandidato = new Map<
       string,
@@ -79,6 +101,8 @@ export class ResultadosService {
     return {
       conteoAbierto: configuracion.conteoAbierto,
       ultimaActualizacion: new Date().toISOString(),
+      vuelta: vueltaConsultada,
+      vueltaActual: configuracion.vuelta,
       mesasCargadas,
       totalMesas: mesasAgg._count._all,
       totalVotosEstudiantiles,

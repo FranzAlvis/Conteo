@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { mesasApi } from '@/lib/api/mesas'
 import { candidatosApi } from '@/lib/api/candidatos'
 import { actasApi } from '@/lib/api/actas'
+import { resolveUploadUrl } from '@/lib/api-client'
 import type { Mesa } from '@/lib/api/types'
 import { handleServerError } from '@/lib/handle-server-error'
 import { Header } from '@/components/layout/header'
@@ -68,15 +69,20 @@ export function TranscripcionFeature() {
   const [observacionesInput, setObservacionesInput] = useState('')
   const [actaPreview, setActaPreview] = useState<string>('')
   const [actaFile, setActaFile] = useState<File | null>(null)
+  const [pizarraPreview, setPizarraPreview] = useState<string>('')
+  const [pizarraFile, setPizarraFile] = useState<File | null>(null)
 
   const transcribirMutation = useMutation({
     mutationFn: async () => {
       if (!selectedMesa) throw new Error('No hay mesa seleccionada')
-      let actaFotoUrl: string | undefined
-      if (actaFile) actaFotoUrl = await actasApi.upload(actaFile)
+      const [actaFotoUrl, pizarraFotoUrl] = await Promise.all([
+        actaFile ? actasApi.upload(actaFile) : Promise.resolve(undefined),
+        pizarraFile ? actasApi.upload(pizarraFile) : Promise.resolve(undefined),
+      ])
       return mesasApi.transcribir(selectedMesa.id, {
         votos: Object.entries(votosInputMap).map(([candidatoId, cantidad]) => ({ candidatoId, cantidad })),
         actaFotoUrl,
+        pizarraFotoUrl,
         observaciones: observacionesInput || undefined,
       })
     },
@@ -88,6 +94,7 @@ export function TranscripcionFeature() {
       toast.success(`Acta de ${mesa.codigo} guardada y transmitida en tiempo real`)
       setOpenDialog(false)
       setActaFile(null)
+      setPizarraFile(null)
     },
     onError: handleServerError,
   })
@@ -104,8 +111,10 @@ export function TranscripcionFeature() {
   const handleOpenTranscripcion = (mesa: Mesa) => {
     setSelectedMesa(mesa)
     setObservacionesInput(mesa.observaciones || '')
-    setActaPreview(mesa.actaFotoUrl || '')
+    setActaPreview(resolveUploadUrl(mesa.actaFotoUrl) || '')
     setActaFile(null)
+    setPizarraPreview(resolveUploadUrl(mesa.pizarraFotoUrl) || '')
+    setPizarraFile(null)
 
     const initialVotes: Record<string, number> = {}
     candidatos.forEach((c) => {
@@ -128,6 +137,18 @@ export function TranscripcionFeature() {
     reader.onload = (evt) => {
       setActaPreview(evt.target?.result as string)
       toast.info('Foto de acta cargada')
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handlePizarraFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPizarraFile(file)
+    const reader = new FileReader()
+    reader.onload = (evt) => {
+      setPizarraPreview(evt.target?.result as string)
+      toast.info('Foto de pizarra cargada')
     }
     reader.readAsDataURL(file)
   }
@@ -266,7 +287,7 @@ export function TranscripcionFeature() {
                         </span>
                       ) : isEnCarga ? (
                         <span className='font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1'>
-                          <AlertCircle className='h-3.5 w-3.5' /> EN PROCESO
+                          <AlertCircle className='h-3.5 w-3.5' /> OBSERVADA
                         </span>
                       ) : (
                         <span className='font-bold text-muted-foreground flex items-center gap-1'>
@@ -274,6 +295,13 @@ export function TranscripcionFeature() {
                         </span>
                       )}
                     </div>
+
+                    {isEnCarga && m.revisionComentario && (
+                      <div className='p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-700 dark:text-amber-400'>
+                        <p className='font-bold uppercase text-[10px] mb-0.5'>Observación de Control de Calidad</p>
+                        {m.revisionComentario}
+                      </div>
+                    )}
 
                     <Button
                       onClick={() => handleOpenTranscripcion(m)}
@@ -283,6 +311,10 @@ export function TranscripcionFeature() {
                       {isCargada ? (
                         <>
                           <Edit className='h-3.5 w-3.5 text-primary' /> Editar Acta Transcrita
+                        </>
+                      ) : isEnCarga ? (
+                        <>
+                          <AlertCircle className='h-3.5 w-3.5' /> Corregir Acta Observada
                         </>
                       ) : (
                         <>
@@ -321,7 +353,7 @@ export function TranscripcionFeature() {
                 )}
               </div>
               <DialogDescription className='text-xs'>
-                {selectedMesa.facultad} — Ingrese el conteo por candidato y adjunte la foto del acta.
+                {selectedMesa.facultad} — Ingrese el conteo por candidato y adjunte la foto del acta y, si tiene, la de la pizarra.
               </DialogDescription>
             </DialogHeader>
 
@@ -380,6 +412,39 @@ export function TranscripcionFeature() {
                 {actaPreview && (
                   <div className='mt-2 rounded-lg overflow-hidden border max-h-36'>
                     <img src={actaPreview} alt='Acta previsualización' className='w-full object-cover' />
+                  </div>
+                )}
+              </div>
+
+              <div className='space-y-2'>
+                <Label className='text-xs font-semibold'>Foto de Pizarra</Label>
+                <div className='flex flex-wrap items-center gap-3'>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    size='sm'
+                    onClick={() => document.getElementById('pizarraInputFile')?.click()}
+                    className='text-xs font-semibold gap-1.5'
+                  >
+                    <Upload className='h-3.5 w-3.5 text-primary' /> Adjuntar Foto de Pizarra
+                  </Button>
+                  <input
+                    id='pizarraInputFile'
+                    type='file'
+                    accept='image/*'
+                    onChange={handlePizarraFileChange}
+                    className='hidden'
+                  />
+                  {pizarraPreview && (
+                    <span className='text-[11px] font-bold text-emerald-600 flex items-center gap-1'>
+                      <CheckCircle2 className='h-3.5 w-3.5' /> Imagen Cargada
+                    </span>
+                  )}
+                </div>
+
+                {pizarraPreview && (
+                  <div className='mt-2 rounded-lg overflow-hidden border max-h-36'>
+                    <img src={pizarraPreview} alt='Pizarra previsualización' className='w-full object-cover' />
                   </div>
                 )}
               </div>
