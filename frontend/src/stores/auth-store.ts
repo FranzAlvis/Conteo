@@ -12,6 +12,7 @@ export interface AuthUser {
   avatar?: string | null
   accountNo?: string
   role?: string | string[]
+  mustChangePassword?: boolean
   exp?: number
 }
 

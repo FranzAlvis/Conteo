@@ -18,8 +18,9 @@ export const Route = createFileRoute('/_authenticated')({
     // navegador. Antes de dejar entrar a cualquier ruta protegida se
     // revalida contra el backend, que deriva el rol desde la base de datos
     // en cada request, y se sobrescribe el valor local con el verificado.
+    let verifiedUser
     try {
-      const verifiedUser = await authApi.me()
+      verifiedUser = await authApi.me()
       setUser({ ...user, ...verifiedUser })
     } catch {
       reset()
@@ -27,6 +28,13 @@ export const Route = createFileRoute('/_authenticated')({
         to: '/sign-in',
         search: { redirect: location.href },
       })
+    }
+
+    // Contraseña inicial/restablecida pendiente de cambio: no se deja entrar
+    // a ninguna otra pantalla hasta que la cambie.
+    const CAMBIO_OBLIGATORIO_PATH = '/cambiar-password-temporal'
+    if (verifiedUser.mustChangePassword && location.pathname !== CAMBIO_OBLIGATORIO_PATH) {
+      throw redirect({ to: CAMBIO_OBLIGATORIO_PATH })
     }
   },
   component: AuthenticatedLayout,

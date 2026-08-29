@@ -10,6 +10,7 @@ export interface UserSummary {
   isActive: boolean
   avatar: string | null
   telefono: string | null
+  mustChangePassword: boolean
   createdAt: string
 }
 
@@ -18,6 +19,7 @@ export interface AuthenticatedUser {
   username: string
   name: string
   role: Role
+  mustChangePassword: boolean
 }
 
 export interface LoginResponse {

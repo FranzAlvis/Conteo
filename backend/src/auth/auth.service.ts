@@ -43,6 +43,7 @@ export class AuthService {
         isActive: user.isActive,
         avatar: user.avatar,
         telefono: user.telefono,
+        mustChangePassword: user.mustChangePassword,
         createdAt: user.createdAt,
       },
     };

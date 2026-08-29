@@ -43,16 +43,17 @@ enum TipoActa {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  name         String
-  username     String   @unique
-  passwordHash String
-  role         Role     @default(VISOR)
-  isActive     Boolean  @default(true)
-  avatar       String?
-  telefono     String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                 String   @id @default(uuid())
+  name               String
+  username           String   @unique
+  passwordHash       String
+  mustChangePassword Boolean  @default(false)
+  role               Role     @default(VISOR)
+  isActive           Boolean  @default(true)
+  avatar             String?
+  telefono           String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   mesasAsignadas       Mesa[]           @relation("TranscriptorMesas")
   mesasControlCalidad  Mesa[]           @relation("ControlCalidadMesas")

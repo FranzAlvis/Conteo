@@ -6,6 +6,7 @@ import { mesasApi } from '@/lib/api/mesas'
 import type { Role, UserSummary } from '@/lib/api/types'
 import { handleServerError } from '@/lib/handle-server-error'
 import { ReportPreviewDialog } from '@/lib/pdf/ReportPreviewDialog'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { TranscriptoresDocument } from '@/lib/pdf/documents/TranscriptoresDocument'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
@@ -53,6 +54,7 @@ import {
   Vote,
   Printer,
   Settings2,
+  KeyRound,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useForm } from 'react-hook-form'
@@ -64,7 +66,6 @@ const userSchema = z.object({
   username: z.string().min(1, 'El usuario es obligatorio'),
   telefono: z.string().min(1, 'El teléfono es obligatorio'),
   role: z.enum(['ADMIN', 'TRANSCRIPTOR', 'AYUDANTE', 'VISOR', 'CONTROL_CALIDAD']),
-  password: z.string().optional(),
 })
 
 export function UsersFeature() {
@@ -76,6 +77,7 @@ export function UsersFeature() {
   const [editingUser, setEditingUser] = useState<UserSummary | null>(null)
   const [assigningUser, setAssigningUser] = useState<UserSummary | null>(null)
   const [selectedMesasMap, setSelectedMesasMap] = useState<Record<string, boolean>>({})
+  const [resettingUser, setResettingUser] = useState<UserSummary | null>(null)
 
   const { data: usersList = [], isPending } = useQuery({
     queryKey: ['users'],
@@ -92,7 +94,7 @@ export function UsersFeature() {
 
   const form = useForm<z.infer<typeof userSchema>>({
     resolver: zodResolver(userSchema),
-    defaultValues: { name: '', username: '', telefono: '', role: 'TRANSCRIPTOR', password: '' },
+    defaultValues: { name: '', username: '', telefono: '', role: 'TRANSCRIPTOR' },
   })
 
   const invalidateUsers = () => queryClient.invalidateQueries({ queryKey: ['users'] })
@@ -114,6 +116,19 @@ export function UsersFeature() {
       invalidateUsers()
       toast.success('Usuario actualizado correctamente')
       setOpenModal(false)
+    },
+    onError: handleServerError,
+  })
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: usersApi.resetPassword,
+    onSuccess: (user) => {
+      invalidateUsers()
+      toast.success(
+        `Contraseña de ${user.name} restablecida a "${user.username}.2026". Deberá cambiarla al iniciar sesión.`,
+        { duration: 10_000 },
+      )
+      setResettingUser(null)
     },
     onError: handleServerError,
   })
@@ -152,13 +167,13 @@ export function UsersFeature() {
 
   const handleOpenAdd = () => {
     setEditingUser(null)
-    form.reset({ name: '', username: '', telefono: '', role: 'TRANSCRIPTOR', password: '' })
+    form.reset({ name: '', username: '', telefono: '', role: 'TRANSCRIPTOR' })
     setOpenModal(true)
   }
 
   const handleOpenEdit = (user: UserSummary) => {
     setEditingUser(user)
-    form.reset({ name: user.name, username: user.username, telefono: user.telefono || '', role: user.role, password: '' })
+    form.reset({ name: user.name, username: user.username, telefono: user.telefono || '', role: user.role })
     setOpenModal(true)
   }
 
@@ -199,19 +214,13 @@ export function UsersFeature() {
         username: values.username,
         telefono: values.telefono,
         role: values.role as Role,
-        ...(values.password ? { password: values.password } : {}),
       })
     } else {
-      if (!values.password || values.password.length < 6) {
-        form.setError('password', { message: 'La contraseña debe tener al menos 6 caracteres' })
-        return
-      }
       createMutation.mutate({
         name: values.name,
         username: values.username,
         telefono: values.telefono,
         role: values.role as Role,
-        password: values.password,
       })
     }
   }
@@ -306,6 +315,11 @@ export function UsersFeature() {
                             <div className='flex items-center gap-2'>
                               <ShieldCheck className='h-4 w-4 text-primary shrink-0' />
                               <span>{u.name}</span>
+                              {u.mustChangePassword && (
+                                <Badge variant='outline' className='text-[9px] font-bold text-amber-600 border-amber-500/30 px-1.5 py-0'>
+                                  Pendiente cambio de clave
+                                </Badge>
+                              )}
                             </div>
                           </TableCell>
 
@@ -479,15 +493,35 @@ export function UsersFeature() {
               </div>
             </div>
 
-            <div className='space-y-1.5'>
-              <Label className='text-xs font-semibold'>
-                Contraseña {editingUser ? '(dejar en blanco para no cambiarla)' : '*'}
-              </Label>
-              <Input type='password' placeholder='••••••••' {...form.register('password')} className='text-xs' />
-              {form.formState.errors.password && (
-                <p className='text-[11px] text-destructive'>{form.formState.errors.password.message}</p>
-              )}
-            </div>
+            {editingUser ? (
+              <div className='flex items-center justify-between gap-3 p-2.5 rounded-lg bg-muted/40 border'>
+                <div className='min-w-0'>
+                  <Label className='text-xs font-semibold'>Contraseña</Label>
+                  <p className='text-[11px] text-muted-foreground'>
+                    {editingUser.mustChangePassword
+                      ? 'Pendiente: aún no cambió su contraseña inicial.'
+                      : 'Ya definió su propia contraseña.'}
+                  </p>
+                </div>
+                <Button
+                  type='button'
+                  variant='outline'
+                  size='sm'
+                  onClick={() => setResettingUser(editingUser)}
+                  className='text-xs font-semibold gap-1.5 shrink-0'
+                >
+                  <KeyRound className='h-3.5 w-3.5 text-primary' /> Restablecer
+                </Button>
+              </div>
+            ) : (
+              <div className='p-2.5 rounded-lg bg-muted/40 border text-[11px] text-muted-foreground'>
+                La contraseña inicial será{' '}
+                <span className='font-mono font-bold text-foreground'>
+                  {(form.watch('username') || 'usuario').trim() || 'usuario'}.2026
+                </span>
+                . Se le pedirá cambiarla al iniciar sesión por primera vez.
+              </div>
+            )}
 
             <div className='space-y-1.5'>
               <Label className='text-xs font-semibold'>Rol de Usuario *</Label>
@@ -524,6 +558,26 @@ export function UsersFeature() {
         description='Formato de nómina oficial de personal transcriptor acreditado para la carga de actas electoral (USFX 2026).'
         fileName='nomina-transcriptores.pdf'
         content={transcriptoresPdf}
+      />
+
+      <ConfirmDialog
+        open={!!resettingUser}
+        onOpenChange={(o) => !o && setResettingUser(null)}
+        handleConfirm={() => resettingUser && resetPasswordMutation.mutate(resettingUser.id)}
+        isLoading={resetPasswordMutation.isPending}
+        title={
+          <span className='flex items-center gap-2'>
+            <KeyRound className='h-5 w-5 text-primary' /> Restablecer Contraseña
+          </span>
+        }
+        desc={
+          <span>
+            La contraseña de <strong>{resettingUser?.name}</strong> volverá a ser{' '}
+            <span className='font-mono font-bold'>{resettingUser?.username}.2026</span>, y deberá
+            cambiarla al iniciar sesión.
+          </span>
+        }
+        confirmText='Restablecer'
       />
     </>
   )

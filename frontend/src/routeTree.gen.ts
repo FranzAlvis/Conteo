@@ -19,6 +19,7 @@ import { Route as AuthenticatedEstadoMesasRouteImport } from './routes/_authenti
 import { Route as AuthenticatedDelegadosRouteImport } from './routes/_authenticated/delegados'
 import { Route as AuthenticatedControlCalidadRouteImport } from './routes/_authenticated/control-calidad'
 import { Route as AuthenticatedConfiguracionRouteImport } from './routes/_authenticated/configuracion'
+import { Route as AuthenticatedCambiarPasswordTemporalRouteImport } from './routes/_authenticated/cambiar-password-temporal'
 import { Route as AuthenticatedAsignacionesRouteImport } from './routes/_authenticated/asignaciones'
 import { Route as errors503RouteImport } from './routes/(errors)/503'
 import { Route as errors500RouteImport } from './routes/(errors)/500'
@@ -81,6 +82,12 @@ const AuthenticatedConfiguracionRoute =
     path: '/configuracion',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCambiarPasswordTemporalRoute =
+  AuthenticatedCambiarPasswordTemporalRouteImport.update({
+    id: '/cambiar-password-temporal',
+    path: '/cambiar-password-temporal',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAsignacionesRoute =
   AuthenticatedAsignacionesRouteImport.update({
     id: '/asignaciones',
@@ -133,6 +140,7 @@ export interface FileRoutesByFullPath {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/asignaciones': typeof AuthenticatedAsignacionesRoute
+  '/cambiar-password-temporal': typeof AuthenticatedCambiarPasswordTemporalRoute
   '/configuracion': typeof AuthenticatedConfiguracionRoute
   '/control-calidad': typeof AuthenticatedControlCalidadRoute
   '/delegados': typeof AuthenticatedDelegadosRoute
@@ -151,6 +159,7 @@ export interface FileRoutesByTo {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/asignaciones': typeof AuthenticatedAsignacionesRoute
+  '/cambiar-password-temporal': typeof AuthenticatedCambiarPasswordTemporalRoute
   '/configuracion': typeof AuthenticatedConfiguracionRoute
   '/control-calidad': typeof AuthenticatedControlCalidadRoute
   '/delegados': typeof AuthenticatedDelegadosRoute
@@ -172,6 +181,7 @@ export interface FileRoutesById {
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
   '/_authenticated/asignaciones': typeof AuthenticatedAsignacionesRoute
+  '/_authenticated/cambiar-password-temporal': typeof AuthenticatedCambiarPasswordTemporalRoute
   '/_authenticated/configuracion': typeof AuthenticatedConfiguracionRoute
   '/_authenticated/control-calidad': typeof AuthenticatedControlCalidadRoute
   '/_authenticated/delegados': typeof AuthenticatedDelegadosRoute
@@ -194,6 +204,7 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/asignaciones'
+    | '/cambiar-password-temporal'
     | '/configuracion'
     | '/control-calidad'
     | '/delegados'
@@ -212,6 +223,7 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/asignaciones'
+    | '/cambiar-password-temporal'
     | '/configuracion'
     | '/control-calidad'
     | '/delegados'
@@ -232,6 +244,7 @@ export interface FileRouteTypes {
     | '/(errors)/500'
     | '/(errors)/503'
     | '/_authenticated/asignaciones'
+    | '/_authenticated/cambiar-password-temporal'
     | '/_authenticated/configuracion'
     | '/_authenticated/control-calidad'
     | '/_authenticated/delegados'
@@ -326,6 +339,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedConfiguracionRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/cambiar-password-temporal': {
+      id: '/_authenticated/cambiar-password-temporal'
+      path: '/cambiar-password-temporal'
+      fullPath: '/cambiar-password-temporal'
+      preLoaderRoute: typeof AuthenticatedCambiarPasswordTemporalRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/asignaciones': {
       id: '/_authenticated/asignaciones'
       path: '/asignaciones'
@@ -387,6 +407,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAsignacionesRoute: typeof AuthenticatedAsignacionesRoute
+  AuthenticatedCambiarPasswordTemporalRoute: typeof AuthenticatedCambiarPasswordTemporalRoute
   AuthenticatedConfiguracionRoute: typeof AuthenticatedConfiguracionRoute
   AuthenticatedControlCalidadRoute: typeof AuthenticatedControlCalidadRoute
   AuthenticatedDelegadosRoute: typeof AuthenticatedDelegadosRoute
@@ -401,6 +422,8 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAsignacionesRoute: AuthenticatedAsignacionesRoute,
+  AuthenticatedCambiarPasswordTemporalRoute:
+    AuthenticatedCambiarPasswordTemporalRoute,
   AuthenticatedConfiguracionRoute: AuthenticatedConfiguracionRoute,
   AuthenticatedControlCalidadRoute: AuthenticatedControlCalidadRoute,
   AuthenticatedDelegadosRoute: AuthenticatedDelegadosRoute,

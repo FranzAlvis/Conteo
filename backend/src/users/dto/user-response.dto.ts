@@ -8,5 +8,6 @@ export class UserResponseDto {
   isActive: boolean;
   avatar: string | null;
   telefono: string | null;
+  mustChangePassword: boolean;
   createdAt: Date;
 }

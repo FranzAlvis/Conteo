@@ -8,6 +8,12 @@ import {
 } from 'class-validator';
 import { Role } from '@prisma/client';
 
+/**
+ * Ya no se pide contraseña al crear un usuario: se genera automáticamente
+ * como `{username}.2026` (ver UsersService.create) y queda marcado con
+ * `mustChangePassword` para que la cambie obligatoriamente en su primer
+ * inicio de sesión.
+ */
 export class CreateUserDto {
   @IsString()
   @MinLength(3, { message: 'El nombre debe tener al menos 3 caracteres' })
@@ -20,10 +26,6 @@ export class CreateUserDto {
   })
   @MinLength(3, { message: 'El usuario debe tener al menos 3 caracteres' })
   username: string;
-
-  @IsString()
-  @MinLength(6, { message: 'La contraseña debe tener al menos 6 caracteres' })
-  password: string;
 
   @IsEnum(Role, { message: 'Rol inválido' })
   role: Role;
