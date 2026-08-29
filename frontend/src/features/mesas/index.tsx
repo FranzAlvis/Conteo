@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { facultadesApi } from '@/lib/api/facultades'
 import { mesasApi } from '@/lib/api/mesas'
 import { usersApi } from '@/lib/api/users'
 import type { Mesa, TipoMesa } from '@/lib/api/types'
 import { handleServerError } from '@/lib/handle-server-error'
+import { ReportPreviewDialog } from '@/lib/pdf/ReportPreviewDialog'
+import { MesasPorFacultadDocument } from '@/lib/pdf/documents/MesasPorFacultadDocument'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { ThemeSwitch } from '@/components/theme-switch'
@@ -142,6 +144,11 @@ export function MesasFeature() {
     ? mesas.filter((m) => m.facultadId === facultadModalId)
     : []
   const facultadDelModal = facultades.find((f) => f.id === facultadModalId)
+
+  const mesasPorFacultadPdf = useMemo(
+    () => <MesasPorFacultadDocument facultades={facultades} />,
+    [facultades],
+  )
 
   const onCrearMesaSubmit = (values: z.infer<typeof crearMesaSchema>) => {
     crearMesaMutation.mutate({
@@ -705,134 +712,14 @@ export function MesasFeature() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal Vista Previa en Pantalla: Mesas por Facultad */}
-      <Dialog open={openReporteFacultadesModal} onOpenChange={setOpenReporteFacultadesModal}>
-        <DialogContent className='sm:max-w-2xl max-h-[90vh] overflow-y-auto'>
-          <DialogHeader className='no-print'>
-            <div className='flex items-center justify-between pe-4'>
-              <DialogTitle className='text-lg font-bold flex items-center gap-2'>
-                <Building2 className='h-5 w-5 text-primary' />
-                Vista Previa de Impresión — Mesas por Facultad
-              </DialogTitle>
-              <Button onClick={() => window.print()} className='text-xs font-bold gap-1 bg-primary text-white'>
-                <Printer className='h-4 w-4' /> Imprimir Reporte
-              </Button>
-            </div>
-            <DialogDescription className='text-xs'>
-              Cantidad de mesas habilitadas y procesadas por facultad (USFX 2026).
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className='p-6 bg-card border rounded-lg space-y-4 text-xs shadow-xs'>
-            <div className='border-b pb-3 text-center space-y-1'>
-              <h2 className='text-sm font-black uppercase text-foreground'>
-                UNIVERSIDAD MAYOR, REAL Y PONTIFICIA DE SAN FRANCISCO XAVIER DE CHUQUISACA
-              </h2>
-              <h3 className='text-sm font-extrabold uppercase text-primary pt-0.5'>
-                ELECCIONES AUTORIDADES UNIVERSITARIAS 2026 — VICERRECTORADO
-              </h3>
-              <p className='text-xs font-bold uppercase text-foreground pt-1 inline-block px-3 py-0.5 bg-muted rounded-sm'>
-                CANTIDAD DE MESAS POR FACULTAD
-              </p>
-            </div>
-
-            <div className='rounded-md border overflow-x-auto'>
-              <table className='w-full text-left text-xs border-collapse'>
-                <thead>
-                  <tr className='bg-muted/60 font-bold uppercase text-[10px] border-b'>
-                    <th className='p-2 border-r text-center w-8'>N°</th>
-                    <th className='p-2 border-r'>Facultad</th>
-                    <th className='p-2 border-r text-center w-24'>Total Mesas</th>
-                    <th className='p-2 border-r text-center w-24'>Cargadas</th>
-                    <th className='p-2 text-center w-24'>Pendientes</th>
-                  </tr>
-                </thead>
-                <tbody className='divide-y'>
-                  {facultades.map((f, index) => (
-                    <tr key={f.id} className='hover:bg-muted/20'>
-                      <td className='p-2 border-r text-center font-bold text-[11px]'>{index + 1}</td>
-                      <td className='p-2 border-r font-bold text-xs'>{f.nombre}</td>
-                      <td className='p-2 border-r text-center font-bold text-xs'>{f.totalMesas}</td>
-                      <td className='p-2 border-r text-center font-bold text-xs'>{f.mesasCargadas}</td>
-                      <td className='p-2 text-center font-bold text-xs'>{f.totalMesas - f.mesasCargadas}</td>
-                    </tr>
-                  ))}
-                  <tr className='bg-muted/40 font-black'>
-                    <td className='p-2 border-r' colSpan={2}>TOTAL</td>
-                    <td className='p-2 border-r text-center'>{facultades.reduce((a, f) => a + f.totalMesas, 0)}</td>
-                    <td className='p-2 border-r text-center'>{facultades.reduce((a, f) => a + f.mesasCargadas, 0)}</td>
-                    <td className='p-2 text-center'>
-                      {facultades.reduce((a, f) => a + (f.totalMesas - f.mesasCargadas), 0)}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <DialogFooter className='no-print'>
-            <Button onClick={() => setOpenReporteFacultadesModal(false)} className='text-xs font-bold'>
-              Cerrar Vista Previa
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* PRINTABLE AREA CONTAINER */}
-      <div id='printable-area' className='hidden print:block p-6 bg-white text-black font-sans space-y-4 text-xs'>
-        <div className='border-b-2 border-black pb-3 text-center space-y-1'>
-          <h2 className='text-sm font-black uppercase tracking-wider text-black'>
-            UNIVERSIDAD MAYOR, REAL Y PONTIFICIA DE SAN FRANCISCO XAVIER DE CHUQUISACA
-          </h2>
-          <h3 className='text-sm font-extrabold uppercase text-black pt-0.5'>
-            ELECCIONES AUTORIDADES UNIVERSITARIAS 2026 — VICERRECTORADO
-          </h3>
-          <p className='text-xs font-bold uppercase text-black pt-1 bg-gray-100 inline-block px-4 py-0.5 border border-gray-400 rounded-sm'>
-            CANTIDAD DE MESAS POR FACULTAD
-          </p>
-          <div className='flex justify-between items-center text-[10px] text-gray-700 pt-2 font-mono'>
-            <span><strong>Unidad:</strong> Centro de Cómputo Electoral</span>
-            <span><strong>Fecha de Emisión:</strong> {new Date().toLocaleDateString('es-BO')} {new Date().toLocaleTimeString()}</span>
-          </div>
-        </div>
-
-        <table className='w-full text-left border-collapse border border-black text-xs'>
-          <thead>
-            <tr className='bg-gray-200 text-black font-bold uppercase text-[10px] border-b border-black'>
-              <th className='p-2 border border-black text-center w-8'>N°</th>
-              <th className='p-2 border border-black'>Facultad</th>
-              <th className='p-2 border border-black text-center w-24'>Total Mesas</th>
-              <th className='p-2 border border-black text-center w-24'>Cargadas</th>
-              <th className='p-2 border border-black text-center w-24'>Pendientes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {facultades.map((f, index) => (
-              <tr key={f.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                <td className='p-2 border border-black text-center font-bold text-[11px]'>{index + 1}</td>
-                <td className='p-2 border border-black font-bold text-xs text-black'>{f.nombre}</td>
-                <td className='p-2 border border-black text-center font-bold text-xs text-black'>{f.totalMesas}</td>
-                <td className='p-2 border border-black text-center font-bold text-xs text-black'>{f.mesasCargadas}</td>
-                <td className='p-2 border border-black text-center font-bold text-xs text-black'>
-                  {f.totalMesas - f.mesasCargadas}
-                </td>
-              </tr>
-            ))}
-            <tr className='bg-gray-200 font-black'>
-              <td className='p-2 border border-black text-black' colSpan={2}>TOTAL</td>
-              <td className='p-2 border border-black text-center text-black'>
-                {facultades.reduce((a, f) => a + f.totalMesas, 0)}
-              </td>
-              <td className='p-2 border border-black text-center text-black'>
-                {facultades.reduce((a, f) => a + f.mesasCargadas, 0)}
-              </td>
-              <td className='p-2 border border-black text-center text-black'>
-                {facultades.reduce((a, f) => a + (f.totalMesas - f.mesasCargadas), 0)}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <ReportPreviewDialog
+        open={openReporteFacultadesModal}
+        onOpenChange={setOpenReporteFacultadesModal}
+        title='Mesas por Facultad'
+        description='Cantidad de mesas habilitadas y procesadas por facultad (USFX 2026).'
+        fileName='mesas-por-facultad.pdf'
+        content={mesasPorFacultadPdf}
+      />
     </>
   )
 }

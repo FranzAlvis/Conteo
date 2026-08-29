@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { usersApi } from '@/lib/api/users'
 import { asignacionesApi } from '@/lib/api/asignaciones'
 import { mesasApi } from '@/lib/api/mesas'
 import type { Role, UserSummary } from '@/lib/api/types'
 import { handleServerError } from '@/lib/handle-server-error'
+import { ReportPreviewDialog } from '@/lib/pdf/ReportPreviewDialog'
+import { TranscriptoresDocument } from '@/lib/pdf/documents/TranscriptoresDocument'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { ThemeSwitch } from '@/components/theme-switch'
@@ -48,7 +50,6 @@ import {
   Search,
   ShieldCheck,
   Phone,
-  FileText,
   Vote,
   Printer,
   Settings2,
@@ -139,7 +140,15 @@ export function UsersFeature() {
     return matchesSearch && matchesRole
   })
 
-  const transcriptoresList = usersList.filter((u) => u.role === 'TRANSCRIPTOR')
+  const transcriptoresPdf = useMemo(
+    () => (
+      <TranscriptoresDocument
+        transcriptores={usersList.filter((u) => u.role === 'TRANSCRIPTOR')}
+        asignaciones={asignaciones}
+      />
+    ),
+    [usersList, asignaciones],
+  )
 
   const handleOpenAdd = () => {
     setEditingUser(null)
@@ -508,134 +517,14 @@ export function UsersFeature() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal Vista Previa en Pantalla */}
-      <Dialog open={openReportModal} onOpenChange={setOpenReportModal}>
-        <DialogContent className='sm:max-w-4xl max-h-[90vh] overflow-y-auto'>
-          <DialogHeader className='no-print'>
-            <div className='flex items-center justify-between pe-4'>
-              <DialogTitle className='text-lg font-bold flex items-center gap-2'>
-                <FileText className='h-5 w-5 text-primary' />
-                Vista Previa de Impresión — Lista de Transcriptores
-              </DialogTitle>
-              <Button onClick={() => window.print()} className='text-xs font-bold gap-1 bg-primary text-white'>
-                <Printer className='h-4 w-4' /> Imprimir Reporte
-              </Button>
-            </div>
-            <DialogDescription className='text-xs'>
-              Formato de nómina oficial de personal transcriptor acreditado para la carga de actas electoral (USFX 2026).
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className='p-6 bg-card border rounded-lg space-y-4 text-xs shadow-xs'>
-            <div className='border-b pb-3 text-center space-y-1'>
-              <h2 className='text-sm font-black uppercase text-foreground'>
-                UNIVERSIDAD MAYOR, REAL Y PONTIFICIA DE SAN FRANCISCO XAVIER DE CHUQUISACA
-              </h2>
-              <h3 className='text-sm font-extrabold uppercase text-primary pt-0.5'>
-                ELECCIONES AUTORIDADES UNIVERSITARIAS 2026 — VICERRECTORADO
-              </h3>
-              <p className='text-xs font-bold uppercase text-foreground pt-1 inline-block px-3 py-0.5 bg-muted rounded-sm'>
-                NÓMINA Y REGISTRO OFICIAL DE PERSONAL TRANSCRIPTOR AUTORIZADO
-              </p>
-            </div>
-
-            <div className='rounded-md border overflow-x-auto'>
-              <table className='w-full text-left text-xs border-collapse'>
-                <thead>
-                  <tr className='bg-muted/60 font-bold uppercase text-[10px] border-b'>
-                    <th className='p-2 border-r text-center w-8'>N°</th>
-                    <th className='p-2 border-r'>Nombre del Transcriptor</th>
-                    <th className='p-2 border-r w-28'>Usuario</th>
-                    <th className='p-2 border-r w-28'>Teléfono Celular</th>
-                    <th className='p-2 border-r'>Mesas Asignadas Bajo su Cuidado</th>
-                    <th className='p-2 border-r text-center w-20'>Total Mesas</th>
-                    <th className='p-2 text-center w-20'>Estado</th>
-                  </tr>
-                </thead>
-                <tbody className='divide-y'>
-                  {transcriptoresList.map((t, index) => {
-                    const asig = asignaciones.find((a) => a.transcriptorId === t.id)
-                    const mesasCodigos = asig ? asig.mesasCodigos.join(', ') : 'Sin mesas asignadas'
-                    const totalMesas = asig ? asig.mesasCodigos.length : 0
-
-                    return (
-                      <tr key={t.id} className='hover:bg-muted/20'>
-                        <td className='p-2 border-r text-center font-bold text-[11px]'>{index + 1}</td>
-                        <td className='p-2 border-r font-bold text-xs'>{t.name}</td>
-                        <td className='p-2 border-r font-mono text-[11px]'>@{t.username}</td>
-                        <td className='p-2 border-r font-mono text-[11px]'>+591 {t.telefono}</td>
-                        <td className='p-2 border-r font-bold text-xs'>{mesasCodigos}</td>
-                        <td className='p-2 border-r text-center font-bold text-xs'>{totalMesas}</td>
-                        <td className='p-2 text-center font-bold text-[10px]'>{t.isActive ? 'ACTIVO' : 'INACTIVO'}</td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <DialogFooter className='no-print'>
-            <Button onClick={() => setOpenReportModal(false)} className='text-xs font-bold'>
-              Cerrar Vista Previa
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* PRINTABLE AREA CONTAINER */}
-      <div id='printable-area' className='hidden print:block p-6 bg-white text-black font-sans space-y-4 text-xs'>
-        <div className='border-b-2 border-black pb-3 text-center space-y-1'>
-          <h2 className='text-sm font-black uppercase tracking-wider text-black'>
-            UNIVERSIDAD MAYOR, REAL Y PONTIFICIA DE SAN FRANCISCO XAVIER DE CHUQUISACA
-          </h2>
-          <h3 className='text-sm font-extrabold uppercase text-black pt-0.5'>
-            ELECCIONES AUTORIDADES UNIVERSITARIAS 2026 — VICERRECTORADO
-          </h3>
-          <p className='text-xs font-bold uppercase text-black pt-1 bg-gray-100 inline-block px-4 py-0.5 border border-gray-400 rounded-sm'>
-            NÓMINA Y REGISTRO OFICIAL DE PERSONAL TRANSCRIPTOR AUTORIZADO
-          </p>
-          <div className='flex justify-between items-center text-[10px] text-gray-700 pt-2 font-mono'>
-            <span><strong>Unidad:</strong> Centro de Cómputo Electoral</span>
-            <span><strong>Fecha de Emisión:</strong> {new Date().toLocaleDateString('es-BO')} {new Date().toLocaleTimeString()}</span>
-          </div>
-        </div>
-
-        <table className='w-full text-left border-collapse border border-black text-xs'>
-          <thead>
-            <tr className='bg-gray-200 text-black font-bold uppercase text-[10px] border-b border-black'>
-              <th className='p-2 border border-black text-center w-8'>N°</th>
-              <th className='p-2 border border-black'>Nombre del Transcriptor</th>
-              <th className='p-2 border border-black w-28'>Usuario</th>
-              <th className='p-2 border border-black w-28'>Teléfono Celular</th>
-              <th className='p-2 border border-black'>Mesas Asignadas Bajo su Cuidado</th>
-              <th className='p-2 border border-black text-center w-20'>Total Mesas</th>
-              <th className='p-2 border border-black text-center w-20'>Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {transcriptoresList.map((t, index) => {
-              const asig = asignaciones.find((a) => a.transcriptorId === t.id)
-              const mesasCodigos = asig ? asig.mesasCodigos.join(', ') : 'Sin mesas asignadas'
-              const totalMesas = asig ? asig.mesasCodigos.length : 0
-
-              return (
-                <tr key={t.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                  <td className='p-2 border border-black text-center font-bold text-[11px]'>{index + 1}</td>
-                  <td className='p-2 border border-black font-bold text-xs text-black'>{t.name}</td>
-                  <td className='p-2 border border-black font-mono text-[11px] text-black'>@{t.username}</td>
-                  <td className='p-2 border border-black font-mono text-[11px] text-black'>+591 {t.telefono}</td>
-                  <td className='p-2 border border-black font-bold text-xs text-black'>{mesasCodigos}</td>
-                  <td className='p-2 border border-black text-center font-bold text-xs text-black'>{totalMesas}</td>
-                  <td className='p-2 border border-black text-center font-bold text-[10px] text-black'>
-                    {t.isActive ? 'ACTIVO' : 'INACTIVO'}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+      <ReportPreviewDialog
+        open={openReportModal}
+        onOpenChange={setOpenReportModal}
+        title='Nómina de Transcriptores'
+        description='Formato de nómina oficial de personal transcriptor acreditado para la carga de actas electoral (USFX 2026).'
+        fileName='nomina-transcriptores.pdf'
+        content={transcriptoresPdf}
+      />
     </>
   )
 }
