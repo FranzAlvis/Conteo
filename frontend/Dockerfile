@@ -7,6 +7,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 COPY . .
+ENV NODE_OPTIONS=--max-old-space-size=3072
 RUN pnpm build
 
 # Etapa 2: servir el build estático con nginx (también hace de proxy hacia
